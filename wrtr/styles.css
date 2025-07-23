@@ -1,0 +1,59 @@
+/* Placeholder CSS for Terminal Writer
+   Add custom styles here as needed */
+
+.bottom {
+    height: 4;
+}
+
+#file_name, #save_button, #cancel_button {
+    height: 3;
+}
+
+#directory_tree {
+    height: 1fr;   /* takes remaining vertical space */
+}
+
+#tree {
+    height: 1fr;
+}
+
+#footer {
+    position: absolute;
+    bottom: 0;
+    height: 4;
+    width: 100%;
+}
+
+#bottom_bar {
+    position: absolute;
+    bottom: 0;
+    height: 4;
+    width: 100%;
+}
+
+.hidden {
+    display: none;
+}
+
+#buttons {
+    height: 3;
+}
+
+#breadcrumb {
+    height: 1;
+    background: #f0f0f0; /* light gray */
+    color: #666666;     /* muted text color */
+    padding: 0 1;
+}
+
+#recent_list {
+    width: 60;
+    height: auto;
+    max-height: 10;
+}
+.recent-item {
+    text-decoration: none;
+}
+.dim {
+    color: gray;
+}

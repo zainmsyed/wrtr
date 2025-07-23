@@ -1,0 +1,6 @@
+textual[syntax]  # Terminal UI framework with syntax highlighting extras
+tree-sitter==0.24.0  # Parsing library for syntax trees
+rapidfuzz>=3.13.0        # Fuzzy search library
+# Testing and linting
+pytest>=7.0.0            # Test framework
+flake8>=6.0.0            # Linter for code style checks
