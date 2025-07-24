@@ -19,7 +19,7 @@ jobs:
           python-version: '3.13'
       - name: Install UV & Dependencies
         run: |
-          pip install uv-py
+          curl -LsSf https://astral.sh/uv/install.sh | sh
           uv install
       - name: Add cx-Freeze
         run: uv add cx-Freeze --dev
@@ -45,7 +45,7 @@ jobs:
           python-version: '3.13'
       - name: Install UV & Dependencies
         run: |
-          pip install uv-py
+          curl -LsSf https://astral.sh/uv/install.sh | sh
           uv install
       - name: Add cx-Freeze
         run: uv add cx-Freeze --dev
