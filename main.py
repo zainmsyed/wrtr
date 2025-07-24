@@ -40,8 +40,8 @@ class wrtr(GlobalKeyHandler, App):
     # CSS_PATH = "styles.css"  # placeholder for styling
     BINDINGS = [
         ("ctrl+f", "show_search", "Search"),
-        ("ctrl+1", "switch_workspace('1')", "Workspace 1"),
-        ("ctrl+2", "switch_workspace('2')", "Workspace 2"),
+        # ("ctrl+1", "switch_workspace('1')", "Workspace 1"),
+        # ("ctrl+2", "switch_workspace('2')", "Workspace 2"),
         ("tab", "focus_next", "Cycle Pane"),
         ("ctrl+n", "new_file", "New File"),
         ("delete", "delete_item", "Delete"),
