@@ -324,6 +324,8 @@ class wrtr(GlobalKeyHandler, App):
         editor_a.focus()
         self._layout_resize()
 
+        RecentManager.add(p)
+
     def action_save_file(self) -> None:
         """Save the focused editor’s content via Save-As dialog."""
         focused = self.focused
@@ -343,6 +345,7 @@ class wrtr(GlobalKeyHandler, App):
             editor._saved_path.write_text(editor.text)
             editor.status_bar.saved = True
             self.query_one("#file-browser").reload()
+            RecentManager.add(editor._saved_path)
 
     async def _do_save(self, editor: MarkdownEditor) -> None:
         result = await self.switch_screen_wait(
@@ -378,6 +381,7 @@ class wrtr(GlobalKeyHandler, App):
         target.write_text(f"# {event.name}\n\n", encoding="utf-8")
         self.notify(f"Created → {target.name}", severity="information")
         self.query_one("#file-browser").reload()
+        RecentManager.add(target)
 
     async def on_file_browser_file_delete(self, event: FileBrowser.FileDelete) -> None:
         """Delete the requested file/folder and reload the tree."""

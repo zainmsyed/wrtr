@@ -12,6 +12,7 @@ from screens.rename_screen import RenameScreen  # NEW import
 from editor import MarkdownEditor
 from screens.save_as_screen import SaveAsScreen
 from screens.confirm_screen import ConfirmScreen
+from recent_manager import RecentManager  # add import
 
 class FileBrowser(DirectoryTree):
     """Custom file browser widget (list-based)"""
@@ -185,16 +186,21 @@ class FileBrowser(DirectoryTree):
             # Enter → open in focused editor (or editor_a)
             focused = app.focused
             editor = focused if isinstance(focused, MarkdownEditor) else app.query_one("#editor_a")
+            editor.load_text(content)
+            editor.set_path(Path(path_str))
+            editor.focus()
+            RecentManager.add(Path(path_str))
+            event.stop()
         elif event.key == "ctrl+m":
             # Ctrl+M → always open in editor_b
             editor = app.query_one("#editor_b")
             app.query_one("#editor_a").visible = True
             app.query_one("#editor_b").visible = True
             app._reflow_layout()
+            editor.load_text(content)
+            editor.set_path(Path(path_str))
+            editor.focus()
+            RecentManager.add(Path(path_str))
+            event.stop()
         else:
             return
-
-        editor.load_text(content)
-        editor.set_path(Path(path_str))
-        editor.focus()
-        event.stop()

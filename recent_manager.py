@@ -5,7 +5,7 @@ from typing import List
 
 class RecentManager:
     """Tiny wrapper around a JSON file that keeps N most-recent files."""
-    MAX = 5
+    MAX = 10
     FILE = Path.home() / ".local/share/wrtr/recent.json"
 
     @classmethod

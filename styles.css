@@ -51,6 +51,11 @@
     height: auto;
     max-height: 10;
 }
+
+#recent_list > ListItem {
+    padding: 1 0;
+}
+
 .recent-item {
     text-decoration: none;
 }
