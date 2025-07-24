@@ -17,7 +17,7 @@ A terminal-based writing application built with the Textual Python framework. Te
 ### Install UV (once per machine)
 
 ```bash
-pip install uv-py
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 ### Clone & Install Dependencies
