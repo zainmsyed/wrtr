@@ -8,7 +8,7 @@ binding_src = os.path.join(os.path.dirname(tree_sitter_markdown.__file__), '_bin
 
 # Build options for cx_Freeze
 build_exe_options = {
-    'packages': ['textual', 'rapidfuzz', 'tree_sitter==0.24.0'],
+    'packages': ['textual', 'rapidfuzz', 'tree_sitter'],
     'include_files': [
         # Include the Tree-sitter Markdown binding
         (binding_src, os.path.join('tree_sitter_markdown', '_binding.abi3.so')),
