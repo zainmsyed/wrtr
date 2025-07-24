@@ -45,7 +45,7 @@ class HomeScreen(Screen):
         # 2. Yield the widgets directly – no extra containers
         yield Static(ASCII_ART, id="logo")
         yield Button("New File (n)", id="new_file")
-        yield Button("Recent Files", id="recent_files", classes="home_button")
+        yield Button("Recent Files (r)", id="recent_files", classes="home_button")
         yield Button("Browse Files (b)", id="browse_files")
         yield Button("Quit (q)", id="quit")
 
@@ -71,10 +71,12 @@ class HomeScreen(Screen):
         if button_id == "new_file":
             self.app.action_new_file()
         elif button_id == "recent_files":
-            # Await Recent Files modal and open chosen file
-            chosen = await self.app.push_screen_wait(RecentFilesModal())
-            if chosen:
-                await self.app.action_open_file(chosen)
+            # Show Recent Files modal in a worker and open chosen file
+            async def show_recent() -> None:
+                chosen = await self.app.push_screen_wait(RecentFilesModal())
+                if chosen:
+                    await self.app.action_open_file(chosen)
+            self.app.run_worker(show_recent(), exclusive=True)
         elif button_id == "browse_files":
             self.app.pop_screen()
         elif button_id == "quit":
