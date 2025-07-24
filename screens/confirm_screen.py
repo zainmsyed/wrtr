@@ -11,12 +11,18 @@ class ConfirmScreen(PaletteDismissModal[bool]):
         super().__init__()
         self.question = question
 
+    def on_key(self, event):
+        if event.key == "y":
+            self.query_one("#yes").press()
+        elif event.key == "n":
+            self.query_one("#no").press()
+
     def compose_modal(self) -> Iterable[Widget]:
         with Vertical():
             yield Label(self.question)
             with Horizontal():
-                yield Button("Yes", id="yes")
-                yield Button("No", id="no")
+                yield Button("Yes (y)", id="yes")
+                yield Button("No (n)", id="no")
 
     def on_button_pressed(self, event) -> None:
         # Dismiss True if user clicked "Yes"

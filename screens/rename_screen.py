@@ -18,8 +18,8 @@ class RenameScreen(PaletteDismissModal[str | None]):
             yield Label(f"Rename {self.old_path.name} in {self.current_dir}", id="breadcrumb")
             yield Input(value=self.filename, placeholder="New name", id="filename_input")
             with Horizontal():
-                yield Button("Rename", id="rename")
-                yield Button("Cancel", id="cancel")
+                yield Button("rename (ctrl+r)", id="rename")
+                yield Button("cancel (ctrl+c)", id="cancel")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "rename":
@@ -27,3 +27,9 @@ class RenameScreen(PaletteDismissModal[str | None]):
             self.dismiss(new_name)
         elif event.button.id == "cancel":
             self.dismiss(None)
+
+    def on_key(self, event):
+        if event.key == "ctrl+r":
+            self.query_one("#rename").press()
+        elif event.key == "ctrl+c":
+            self.query_one("#cancel").press()

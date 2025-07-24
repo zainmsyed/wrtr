@@ -20,9 +20,9 @@ class SaveAsScreen(PaletteDismissModal[Path | None]):
             yield Label(f"New file in {self.current_dir}", id="breadcrumb")
             yield Input(value=self.filename, placeholder="File name", id="filename_input")
             with Horizontal():
-                yield Button("Create", id="save")
-                yield Button("Cancel", id="cancel")
-                yield Button("Browse…", id="browse")
+                yield Button("Save (Ctrl+s)", id="save")
+                yield Button("Cancel (Ctrl+c)", id="cancel")
+                yield Button("Browse… (Ctrl+b)", id="browse")
 
         # Tree starts hidden
         tree = DirectoryTree(self.current_dir, id="tree")
@@ -51,3 +51,11 @@ class SaveAsScreen(PaletteDismissModal[Path | None]):
         tree = self.query_one("#tree")
         tree.display = False
         self.query_one("#filename_input").focus()
+
+    def on_key(self, event):
+        if event.key == "ctrl+s":
+            self.query_one("#save").press()
+        elif event.key == "ctrl+c":
+            self.query_one("#cancel").press()
+        elif event.key == "ctrl+b":
+            self.query_one("#browse").press()
