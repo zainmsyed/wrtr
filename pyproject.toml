@@ -1,0 +1,17 @@
+[project]
+name = "wrtr"
+version = "0.0.1"
+description = "Terminal Writing Applications"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "rapidfuzz==3.13.0",
+    "textual[syntax]==4.0.0",
+    "tree-sitter==0.24.0",
+]
+
+[dependency-groups]
+dev = [
+    "flake8==7.3.0",
+    "pytest==8.4.1",
+]

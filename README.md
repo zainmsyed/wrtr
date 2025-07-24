@@ -14,25 +14,33 @@ A terminal-based writing application built with the Textual Python framework. Te
 
 ## Quick Start
 
-### Install
-
-Follow these steps to build and run the binary locally:
+### Install UV (once per machine)
 
 ```bash
-# Clone the repository
+pip install uv-py
+```
+
+### Clone & Install Dependencies
+
+```bash
 git clone https://github.com/zainmsyed/wrtr.git
 cd wrtr
+uv install
+```
 
-# Set up virtual environment and install dependencies
-python -m venv .venv
-source .venv/bin/activate  # On Linux/macOS
-pip install -r requirements.txt
+### Launch the App
 
-# Build the binary
+```bash
+uv run python main.py
+```
+
+### Build a Standalone Binary
+
+If you still need a bundled binary:
+
+```bash
 pip install pyinstaller
-env/bin/activate && pyinstaller --onefile main.py
-
-# (On Linux/macOS) Make the binary executable and run it
+pyinstaller main.spec
 chmod +x dist/main
 ./dist/main
 ```
