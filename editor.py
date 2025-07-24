@@ -21,7 +21,7 @@ class MarkdownEditor(Vertical):
         super().__init__(id=id)
         self._saved_path: Path | None = None
         self._save_timer: Timer | None = None
-        self._debounce_delay: float = 5.0
+        self._debounce_delay: float = 1.0
 
     def compose(self) -> Generator[Widget, None, None]:
         """Inner composition: TextArea + StatusBar."""

@@ -14,25 +14,10 @@ A terminal-based writing application built with the Textual Python framework. Te
 
 ## Quick Start
 
-### Option 1: Download Pre-built Binary (Recommended)
-
-Download the latest binary for your operating system from the [Releases page](https://github.com/zainmsyed/wrtr/releases):
-
-- **Linux**: Download `wrtr-linux`
-- **Windows**: Download `wrtr-windows.exe` 
-- **macOS**: Download `wrtr-macos`
-
-Make the binary executable (Linux/macOS only):
-```bash
-chmod +x wrtr-linux  # or wrtr-macos
-./wrtr-linux         # Run the application
-```
-
-On Windows, simply double-click `wrtr-windows.exe` or run it from the command prompt.
-
-### Option 2: Build from Source
+### Install
 
 Follow these steps to build and run the binary locally:
+
 ```bash
 # Clone the repository
 git clone https://github.com/zainmsyed/wrtr.git
@@ -45,20 +30,18 @@ pip install -r requirements.txt
 
 # Build the binary
 pip install pyinstaller
-env/bin/activate && pyinstaller main.spec
+env/bin/activate && pyinstaller --onefile main.py
 
 # (On Linux/macOS) Make the binary executable and run it
 chmod +x dist/main
 ./dist/main
 ```
 
-
 ## Documentation
 
 - [Welcome Guide](docs/Welcome.md)
 - [Markdown Cheat Sheet](docs/Markdown_Cheat_Sheet.md)
 - [Key Bindings](docs/Key_Binding_Cheat_Sheet.md)
-
 
 ---
 
