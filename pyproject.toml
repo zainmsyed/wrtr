@@ -12,6 +12,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "cx-freeze>=8.3.0",
     "flake8==7.3.0",
     "pytest==8.4.1",
 ]

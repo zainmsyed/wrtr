@@ -1,0 +1,61 @@
+name: Build and Package
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    name: macOS Build
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+      - name: Install UV & Dependencies
+        run: |
+          pip install uv-py
+          uv install
+      - name: Add cx-Freeze
+        run: uv add cx-Freeze --dev
+      - name: Build macOS Executable
+        run: uv run python setup.py build
+      - name: Archive macOS Artifacts
+        run: |
+          mkdir -p artifacts
+          cp -r build/exe.macos*/ artifacts/mac
+      - uses: actions/upload-artifact@v3
+        with:
+          name: wrtr-macos
+          path: artifacts/mac
+
+  build-linux:
+    name: Linux Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+      - name: Install UV & Dependencies
+        run: |
+          pip install uv-py
+          uv install
+      - name: Add cx-Freeze
+        run: uv add cx-Freeze --dev
+      - name: Build Linux Executable
+        run: uv run python setup.py build
+      - name: Archive Linux Artifacts
+        run: |
+          mkdir -p artifacts/linux
+          cp -r build/exe.linux*/ artifacts/linux
+      - uses: actions/upload-artifact@v3
+        with:
+          name: wrtr-linux
+          path: artifacts/linux
