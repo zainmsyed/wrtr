@@ -20,7 +20,7 @@ jobs:
       - name: Install UV & Dependencies
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
-          uv pip install --requirements uv.lock
+          uv sync
       - name: Add cx-Freeze
         run: uv add cx-Freeze --dev
       - name: Build macOS Executable
@@ -46,7 +46,7 @@ jobs:
       - name: Install UV & Dependencies
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
-          uv pip install --requirements uv.lock
+          uv sync
       - name: Add cx-Freeze
         run: uv add cx-Freeze --dev
       - name: Build Linux Executable
