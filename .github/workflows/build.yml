@@ -25,6 +25,10 @@ jobs:
         run: uv add cx-Freeze --dev
       - name: Build macOS Executable
         run: uv run python setup.py build
+      - name: Sign macOS Binary
+        run: |
+          codesign --force --deep --sign - build/exe.macos*/main
+          find build/exe.macos*/lib -name "*.so" -exec codesign --force --sign - {} \;
       - name: Archive macOS Artifacts
         run: |
           mkdir -p artifacts
