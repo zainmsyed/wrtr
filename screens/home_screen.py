@@ -4,7 +4,7 @@ Home Screen: initial menu for Terminal Writer Application
 from textual.screen import Screen
 from textual.widgets import Static, Button
 from textual.app import ComposeResult
-from screens.recent_files_modal import RecentFilesModal
+from screens.recent_files_screen import RecentFilesScreen
 
 ASCII_ART = r"""
 ██╗----██╗██████╗-████████╗██████╗-
@@ -74,7 +74,7 @@ class HomeScreen(Screen):
         elif button_id == "recent_files":
             # Show Recent Files modal in a worker and open chosen file
             async def show_recent() -> None:
-                chosen = await self.app.push_screen_wait(RecentFilesModal())
+                chosen = await self.app.push_screen_wait(RecentFilesScreen())
                 if chosen:
                     await self.app.action_open_file(chosen)
             self.app.run_worker(show_recent(), exclusive=True)

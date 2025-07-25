@@ -3,7 +3,7 @@ from textual.widgets import ListView, ListItem, Label
 from textual.screen import ModalScreen
 from recent_manager import RecentManager
 
-class RecentFilesModal(ModalScreen[Path | None]):
+class RecentFilesScreen(ModalScreen[Path | None]):
     """Modal that shows ≤ 5 recent files."""
 
     BINDINGS = [("escape", "dismiss(None)")]

@@ -7,7 +7,7 @@ from textual.app import App, ComposeResult, ScreenStackError  # for handling scr
 from textual.containers import Horizontal
 from textual.widgets import Header, Footer, Button, DirectoryTree
 from screens.home_screen import HomeScreen
-from screens.recent_files_modal import RecentFilesModal  # NEW
+from screens.recent_files_screen import RecentFilesScreen  # NEW
 
 from file_browser import FileBrowser
 from editor import MarkdownEditor
@@ -406,7 +406,7 @@ class wrtr(GlobalKeyHandler, App):
         if isinstance(self.screen, HomeScreen):
             if button_id == "recent_files":
                 async def _show():
-                    chosen = await self.push_screen_wait(RecentFilesModal())
+                    chosen = await self.push_screen_wait(RecentFilesScreen())
                     if chosen:
                         await self.action_open_file(chosen)
                 self.run_worker(_show(), exclusive=True)
