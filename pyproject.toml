@@ -5,6 +5,7 @@ description = "Terminal Writing Applications"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "pyspellchecker>=0.8.3",
     "rapidfuzz==3.13.0",
     "textual[syntax]==4.0.0",
     "tree-sitter==0.24.0",
@@ -15,4 +16,5 @@ dev = [
     "cx-freeze>=8.3.0",
     "flake8==7.3.0",
     "pytest==8.4.1",
+    "textual-dev>=1.7.0",
 ]
