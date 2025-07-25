@@ -19,7 +19,6 @@ then...
 ```bash
 git clone https://github.com/zainmsyed/wrtr.git
 cd wrtr
-uv install
 ```
 
 ### Create a Virtual Environment
