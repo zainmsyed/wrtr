@@ -1,33 +1,61 @@
 from typing import Iterable
-from textual.widget import Widget
+from textual.screen import ModalScreen
+from textual.containers import Center, Middle, Vertical, Horizontal
 from textual.widgets import Button, Label
-from textual.containers import Horizontal, Vertical
-from palette_dismiss_modal import PaletteDismissModal
+from textual import events
+from modal_base import EscModal
 
-class ConfirmScreen(PaletteDismissModal[bool]):
-    """Yes/No confirmation – now palette-styled."""
+class ConfirmScreen(EscModal, ModalScreen[bool]):
+    """Yes/No confirmation dialog."""
+
+    CSS = """
+    ConfirmScreen { align: center middle; }
+
+    #dialog {
+        width: auto;
+        max-width: 60;
+        height: auto;           /* Prevent vertical stretching */
+        background: $panel;
+        color: $text;
+        border: tall $background;
+        padding: 1 2;
+    }
+
+    #question {
+        margin-bottom: 1;   /* 1-row gap above the buttons */
+    }
+
+    /* row of buttons: let it size itself */
+    #buttons {
+        width: auto;          /* shrink-wrap */
+        height: auto;
+    }
+
+    /* each button only as wide as its text + padding */
+    #buttons Button {
+        width: auto;
+        margin-right: 1;      /* 1-cell gap between buttons */
+    }
+    """
 
     def __init__(self, question: str) -> None:
         super().__init__()
         self.question = question
 
-    def on_key(self, event):
+    def compose(self) -> Iterable:
+        with Center():
+            with Middle():
+                with Vertical(id="dialog"):
+                    yield Label(self.question, id="question")
+                    with Horizontal(id="buttons"):
+                        yield Button("Yes (y)", id="yes")
+                        yield Button("No (n)",  id="no")
+
+    def on_key(self, event: events.Key) -> None:
         if event.key == "y":
             self.query_one("#yes").press()
         elif event.key == "n":
             self.query_one("#no").press()
 
-    def compose_modal(self) -> Iterable[Widget]:
-        with Vertical():
-            yield Label(self.question)
-            with Horizontal():
-                yield Button("Yes (y)", id="yes")
-                yield Button("No (n)", id="no")
-
     def on_button_pressed(self, event) -> None:
-        # Dismiss True if user clicked "Yes"
         self.dismiss(event.button.id == "yes")
-
-    def action_esc(self) -> None:
-        """Dismiss the modal without routing anywhere."""
-        self.dismiss(None)

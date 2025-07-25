@@ -19,14 +19,14 @@
 
 #footer {
     position: absolute;
-    bottom: 0;
+    dock: bottom; /* Dock the footer to the bottom */
     height: 4;
     width: 100%;
 }
 
 #bottom_bar {
     position: absolute;
-    bottom: 0;
+    dock: bottom; /* Dock the bottom bar to the bottom */
     height: 4;
     width: 100%;
 }
@@ -57,8 +57,24 @@
 }
 
 .recent-item {
-    text-decoration: none;
+    /* Remove text-decoration as it's not supported */
 }
 .dim {
     color: gray;
+}
+
+ModalScreen {
+    align: center middle; /* Center the modal both horizontally and vertically */
+    border: none; /* Remove any border */
+    outline: none; /* Remove any outline */
+}
+
+#modal-content {
+    width: 80;
+    height: auto;
+    max-height: 25;
+    background: #2e2e2e; /* Fallback dark gray background */
+    color: #ffffff; /* Fallback white text color */
+    border: solid #444444; /* Use a valid Textual border type */
+    padding: 1 1; /* Use integers for padding */
 }
