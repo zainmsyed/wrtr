@@ -27,6 +27,7 @@ class HomeScreen(Screen):
     #logo {
         width: auto;          /* shrink-wrap the ASCII art */
         text-align: center;   /* center the text inside it */
+        padding: 2 0;         /* 2 blank lines above & below the art */
     }
 
     HomeScreen Button {

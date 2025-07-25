@@ -16,9 +16,9 @@ class RenameScreen(EscModal, ModalScreen[str | None]):
         width: auto;
         max-width: 70;
         height: auto;
-        background: $panel;
+        background: $background; /* Match the main background color */
         color: $text;
-        border: tall $background;
+        border: tall $background; /* Blend border with background */
         padding: 1 2;
     }
 

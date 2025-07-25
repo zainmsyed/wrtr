@@ -16,28 +16,38 @@ class SaveAsScreen(EscModal, ModalScreen[Path | None]):
         width: auto;
         max-width: 70;
         height: auto;
-        background: $panel;
+        background: $background; /* Match the main background color */
         color: $text;
-        border: tall $background;
+        border: tall $background; /* Blend border with background */
         padding: 1 2;
     }
 
-    #breadcrumb    { margin-bottom: 1; }
-    #filename_input { width: 100%; margin-bottom: 1; }
+    #breadcrumb { margin-bottom: 1; }
+    #filename_input { width: 100%; margin-bottom: 1; text-align: left; }
 
     #buttons {
-        width: auto;
+        width: 100%;
         height: auto;
     }
     #buttons Button {
-        width: auto;
+    width: 1fr;          /* Fill available space equally */
         margin-right: 1;
+    }
+    #buttons Button:last-of-type { margin-right: 0; }
+
+    /* Browse dropdown toggle */
+    .browse-btn {
+        width: 100%; /* full width toggle */
+        margin-top: 1; /* space above */
+        text-align: left;
     }
 
     #tree {
-        display: none;          /* start hidden */
+        display: none;
         height: 15;
-        margin-top: 1;
+        width: 100%;
+    margin-top: 1;
+        overflow-y: auto;
     }
     """
 
@@ -62,11 +72,13 @@ class SaveAsScreen(EscModal, ModalScreen[Path | None]):
                         placeholder="File name",
                         id="filename_input"
                     )
+                    # Main buttons: Save and Cancel only
                     with Horizontal(id="buttons"):
                         yield Button("Save (Ctrl+s)", id="save")
                         yield Button("Cancel (Ctrl+c)", id="cancel")
-                        yield Button("Browse… (Ctrl+b)", id="browse")
 
+                    # Browse toggle button beneath main buttons
+                    yield Button("Browse… (Ctrl+b)", id="browse", classes="browse-btn")
                     tree = DirectoryTree(self.current_dir, id="tree")
                     yield tree
 
@@ -84,6 +96,9 @@ class SaveAsScreen(EscModal, ModalScreen[Path | None]):
             tree.display = not tree.display
             if tree.display:
                 tree.focus()
+                tree.styles.width = "auto"  # Ensure width does not push modal
+            else:
+                tree.styles.width = "0"  # Reset width when hidden
 
     def on_directory_tree_directory_selected(self, event) -> None:
         self.current_dir = event.path

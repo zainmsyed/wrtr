@@ -15,9 +15,9 @@ class ConfirmScreen(EscModal, ModalScreen[bool]):
         width: auto;
         max-width: 60;
         height: auto;           /* Prevent vertical stretching */
-        background: $panel;
+        background: $background; /* Match the main background color */
         color: $text;
-        border: tall $background;
+        border: tall $background; /* Blend border with background */
         padding: 1 2;
     }
 
