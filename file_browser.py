@@ -174,12 +174,20 @@ class FileBrowser(DirectoryTree):
             event.stop()
             return
 
-        # Only handle file-open keys for file nodes
-        if not self.cursor_node or not self.cursor_node.data.path.is_file():
+        # Only handle file-open keystrokes (Enter and Ctrl+M) for file nodes
+        if event.key not in ("enter", "ctrl+m"):
             return
-
-        path_str = str(self.cursor_node.data.path)
-        content = Path(path_str).read_text(encoding="utf-8")
+        node = self.cursor_node
+        if not node or not node.data.path.is_file():
+            return
+        path = node.data.path
+        path_str = str(path)
+        try:
+            content = Path(path_str).read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            # Skip binary or unreadable files
+            self.app.notify(f"Cannot open non-text file: {path.name}", severity="warning")
+            return
         app = self.app
 
         if event.key == "enter":
