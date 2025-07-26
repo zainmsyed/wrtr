@@ -47,7 +47,7 @@ class wrtr(GlobalKeyHandler, App):
         ("delete", "delete_item", "Delete"),
         ("escape", "to_home", "Back to Home"),
         ("ctrl+t", "toggle_browser", "Toggle Browser"),
-        ("ctrl+o", "toggle_root", "Toggle FS Root"),
+        ("ctrl+o", "cycle_root", "Toggle Root"),
         ("ctrl+w", "close_pane", "Close Pane"),
         ("ctrl+s", "save_file", "Save"),
 
@@ -205,6 +205,9 @@ class wrtr(GlobalKeyHandler, App):
             self._root_toggled = True
             self.notify("File browser root: /", severity="info")
         tree.reload()
+
+    def action_cycle_root(self) -> None:
+        self.query_one("#file-browser").cycle_root()
 
     def _reflow_layout(self) -> None:
         """Resize exactly like Ctrl-T does."""
