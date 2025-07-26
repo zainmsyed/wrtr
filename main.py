@@ -47,6 +47,7 @@ class wrtr(GlobalKeyHandler, App):
         ("delete", "delete_item", "Delete"),
         ("escape", "to_home", "Back to Home"),
         ("ctrl+t", "toggle_browser", "Toggle Browser"),
+        ("ctrl+o", "toggle_root", "Toggle FS Root"),
         ("ctrl+w", "close_pane", "Close Pane"),
         ("ctrl+s", "save_file", "Save"),
 
@@ -62,6 +63,7 @@ class wrtr(GlobalKeyHandler, App):
 
     def __init__(self):
         super().__init__()
+        self._root_toggled = False
         self.workspace_manager = WorkspaceManager()
         self.theme_manager = ThemeManager()
 
@@ -189,6 +191,20 @@ class wrtr(GlobalKeyHandler, App):
             # Hide second editor when it's unused
             editor_b.styles.display = "none"
             editor_b.styles.width = "0%"
+
+    def action_toggle_root(self) -> None:
+        """Toggle file browser between default wrtr folder and system root."""
+        tree = self.query_one("#file-browser")
+        # Toggle between default directory and root filesystem
+        if self._root_toggled:
+            tree.path = self.DEFAULT_DIR
+            self._root_toggled = False
+            self.notify(f"File browser root: {self.DEFAULT_DIR}", severity="info")
+        else:
+            tree.path = Path("/")
+            self._root_toggled = True
+            self.notify("File browser root: /", severity="info")
+        tree.reload()
 
     def _reflow_layout(self) -> None:
         """Resize exactly like Ctrl-T does."""

@@ -20,6 +20,7 @@ class FileBrowser(DirectoryTree):
         """
         Initialize FileBrowser at the given root path.
         """
+        # Path will be set by main App.on_mount; initialize to cwd temporarily
         super().__init__(path, id=id)
         self.current_path: str = path  # track currently highlighted path
         # ...existing code...  # placeholder for future customizations
@@ -177,30 +178,36 @@ class FileBrowser(DirectoryTree):
         # Only handle file-open keys for file nodes
         if not self.cursor_node or not self.cursor_node.data.path.is_file():
             return
-
-        path_str = str(self.cursor_node.data.path)
-        content = Path(path_str).read_text(encoding="utf-8")
+        # Determine selected file path
+        path = self.cursor_node.data.path
         app = self.app
-
+        # Enter → open in focused editor (or editor_a)
         if event.key == "enter":
-            # Enter → open in focused editor (or editor_a)
+            try:
+                content = path.read_text(encoding="utf-8")
+            except Exception:
+                content = ""
             focused = app.focused
             editor = focused if isinstance(focused, MarkdownEditor) else app.query_one("#editor_a")
             editor.load_text(content)
-            editor.set_path(Path(path_str))
+            editor.set_path(path)
             editor.focus()
-            RecentManager.add(Path(path_str))
+            RecentManager.add(path)
             event.stop()
+        # Ctrl+M → always open in editor_b
         elif event.key == "ctrl+m":
-            # Ctrl+M → always open in editor_b
+            try:
+                content = path.read_text(encoding="utf-8")
+            except Exception:
+                content = ""
             editor = app.query_one("#editor_b")
             app.query_one("#editor_a").visible = True
             app.query_one("#editor_b").visible = True
             app._reflow_layout()
             editor.load_text(content)
-            editor.set_path(Path(path_str))
+            editor.set_path(path)
             editor.focus()
-            RecentManager.add(Path(path_str))
+            RecentManager.add(path)
             event.stop()
         else:
             return
