@@ -287,7 +287,11 @@ class wrtr(GlobalKeyHandler, App):
 
     async def on_file_browser_file_open(self, event: FileBrowser.FileOpen) -> None:
         path = event.path
-        content = Path(path).read_text(encoding="utf-8")
+        try:
+            content = Path(path).read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError) as e:
+            self.show_error_message("Error", f"Cannot open file: {e}")
+            return
         target = event.target
         if target == "editor_b":
             editor = self.query_one("#editor_b")
@@ -416,6 +420,9 @@ class wrtr(GlobalKeyHandler, App):
         except Exception as e:
             self.notify(f"Delete failed: {e}", severity="error")
 
+    def show_error_message(self, title: str, message: str) -> None:
+        """Display an error message to the user as a toast notification."""
+        self.notify(f"{title}: {message}", severity="error")
 
     # ---------------------------------------------------------
     #  Home-screen helpers
