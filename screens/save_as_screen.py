@@ -7,7 +7,7 @@ from textual import events
 from modal_base import EscModal
 
 class SaveAsScreen(EscModal, ModalScreen[Path | None]):
-    """Save-as dialog with optional directory browser."""
+    """Save-as or create-folder dialog with optional directory browser."""
 
     CSS = """
     SaveAsScreen { align: center middle; }
@@ -54,11 +54,16 @@ class SaveAsScreen(EscModal, ModalScreen[Path | None]):
     def __init__(
         self,
         default_filename: str = "untitled.md",
-        default_dir: Path | None = None
+        default_dir: Path | None = None,
+        title: str = "New file",
+        add_extension: bool = True,
     ) -> None:
         super().__init__()
         self.current_dir = default_dir or Path.cwd()
-        if not Path(default_filename).suffix:
+        self.title = title
+        self.add_extension = add_extension
+        # Append .md only when requested
+        if add_extension and not Path(default_filename).suffix:
             default_filename = f"{default_filename}.md"
         self.filename = default_filename
 
@@ -66,7 +71,7 @@ class SaveAsScreen(EscModal, ModalScreen[Path | None]):
         with Center():
             with Middle():
                 with Vertical(id="save-box"):
-                    yield Label(f"New file in {self.current_dir}", id="breadcrumb")
+                    yield Label(f"{self.title} in {self.current_dir}", id="breadcrumb")
                     yield Input(
                         value=self.filename,
                         placeholder="File name",
@@ -86,7 +91,8 @@ class SaveAsScreen(EscModal, ModalScreen[Path | None]):
     def on_button_pressed(self, event) -> None:
         if event.button.id == "save":
             name = self.query_one("#filename_input", Input).value
-            if not Path(name).suffix:
+            # Append .md only when requested
+            if self.add_extension and not Path(name).suffix:
                 name = f"{name}.md"
             self.dismiss(self.current_dir / name)
         elif event.button.id == "cancel":

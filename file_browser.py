@@ -86,12 +86,21 @@ class FileBrowser(DirectoryTree):
     async def _worker_create_folder(self, parent_dir: Path) -> None:
         """Worker to prompt for new folder name and create it."""
         result = await self.app.switch_screen_wait(
-            SaveAsScreen(default_filename="new_folder", default_dir=parent_dir)
+            SaveAsScreen(
+                default_filename="new_folder",
+                default_dir=parent_dir,
+                title="New folder",
+                add_extension=False,
+            )
         )
         if result:
-            new_dir = parent_dir / result.name
+            # Strip any '.md' extension that SaveAsScreen may have added
+            name = result.name
+            if name.lower().endswith('.md'):
+                name = name[: -3]
+            new_dir = parent_dir / name
             try:
-                new_dir.mkdir()
+                new_dir.mkdir(parents=True, exist_ok=False)
                 self.app.notify(f"Created folder → {new_dir.name}")
                 self.reload()
             except Exception as e:
