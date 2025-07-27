@@ -4,11 +4,19 @@ A terminal-based writing application built with the Textual Python framework. Te
 
 ## Quick Start
 
-### Install UV (once per machine)
+### Install UV
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
+
+or  
+
+```bash
+pip install uv
+```
+
+more ways to install uv: [Official Docs](https://docs.astral.sh/uv/getting-started/installation/)
 
 ### Clone & Install Dependencies
 
@@ -19,18 +27,6 @@ then...
 ```bash
 git clone https://github.com/zainmsyed/wrtr.git
 cd wrtr
-```
-
-### Create a Virtual Environment
-
-```bash
-uv venv --python 3.13
-```
-
-### Activate Virtual Environment
-
-```bash
-source .venv/bin/activate
 ```
 
 ### Launch the App

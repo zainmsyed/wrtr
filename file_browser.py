@@ -13,16 +13,26 @@ from editor import MarkdownEditor
 from screens.save_as_screen import SaveAsScreen
 from screens.confirm_screen import ConfirmScreen
 from recent_manager import RecentManager  # add import
+from favorite_manager import get as get_favorites, add, remove
+import tempfile
+import shutil  # add near top imports
 
 class FileBrowser(DirectoryTree):
     """Custom file browser widget (list-based)"""
-    def __init__(self, path: str = '.', id: str = None) -> None:
+    def __init__(self, path: str = "/", id: str = None) -> None:
         """
         Initialize FileBrowser at the given root path.
         """
         super().__init__(path, id=id)
         self.current_path: str = path  # track currently highlighted path
-        # ...existing code...  # placeholder for future customizations
+        self._cycle = 0
+        self._roots = [
+            Path(__file__).with_suffix('').parent / "wrtr",  # wrtr folder
+            None,  # Favorites view
+            Path("/"),  # Computer root
+        ]
+        self._tmp_fav_dir = None
+        self.reload()
 
     class FileOpen(Message):
         """Message sent when a file is requested to open in an editor pane"""
@@ -109,6 +119,44 @@ class FileBrowser(DirectoryTree):
             except Exception as e:
                 self.app.notify(f"Rename failed: {e}", severity="error")
 
+    def cycle_root(self) -> None:
+        # Advance cycle: 0=wrtr, 1=favorites, 2=computer root
+        self._cycle = (self._cycle + 1) % 3
+        # Handle favorites view (show empty view if no favorites)
+        if self._cycle == 1:
+            favs = get_favorites()
+            # Prepare a consistent favorites folder in system temp
+            fav_dir = Path(tempfile.gettempdir()) / "favorites"
+            if fav_dir.exists():
+                shutil.rmtree(fav_dir)
+            fav_dir.mkdir()
+            self._tmp_fav_dir = fav_dir
+            # Populate symlinks for each favorite
+            for fav in favs:
+                if fav.is_dir():
+                    link_path = fav_dir / fav.name
+                    try:
+                        link_path.symlink_to(fav.absolute())
+                    except FileExistsError:
+                        continue
+            # Point tree at the 'favorites' temp folder
+            self.path = fav_dir
+            self.reload()
+            self.app.notify("Root → favorites", severity="info")
+            return
+        # Handle wrtr folder or computer root
+        self.path = self._roots[self._cycle]
+        self.reload()
+        self.app.notify(f"Root → {self.path}", severity="info")
+
+    def _refresh_fav_view(self) -> None:
+        """Clear old temp directory and reload favorites view."""
+        if self._tmp_fav_dir and self._tmp_fav_dir.exists():
+            shutil.rmtree(self._tmp_fav_dir)
+        # Reset cycle index to point just before favorites
+        self._cycle = 0
+        self.cycle_root()
+
     async def on_tree_node_selected(self, event: DirectoryTree.NodeSelected) -> None:
         """Handle tree node selection."""
         event.stop()
@@ -128,7 +176,28 @@ class FileBrowser(DirectoryTree):
             print(f"[DEBUG on_node_highlighted] error: {e}")
 
     async def on_key(self, event: Key) -> None:
-        """Handle new file (n), delete, rename (r), and file-open keys."""
+        """Handle new file (n), delete, rename (r), favorite (f), and file-open keys."""
+        # Favorite/unfavorite folders
+        if event.key == "f":
+            node = self.cursor_node
+            if not node:
+                return
+            folder = Path(node.data.path).resolve()
+            if not folder.is_dir():
+                self.app.notify("Only folders can be favorited", severity="warning")
+                event.stop()
+                return
+            if folder in get_favorites():
+                remove(folder)
+                self.app.notify(f"Removed favorite: {folder.name}", severity="info")
+            else:
+                add(folder)
+                self.app.notify(f"Marked favorite: {folder.name}", severity="info")
+            # Refresh favorites view if active
+            if self._cycle == 1:
+                self._refresh_fav_view()
+            event.stop()
+            return
         # Rename file or folder
         if event.key == "r":
             node = self.cursor_node

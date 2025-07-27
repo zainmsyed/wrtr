@@ -209,11 +209,9 @@ class wrtr(GlobalKeyHandler, App):
 
     def action_cycle_root(self) -> None:
         """
-        Toggle the file browser root between default and filesystem root.
-        Delegates to action_toggle_root.
+        Cycle the file browser through wrtr folder, favorites, and computer root.
         """
-        # Reuse existing toggle logic instead of calling nonexistent cycle_root
-        self.action_toggle_root()
+        self.query_one("#file-browser").cycle_root()
 
     def _reflow_layout(self) -> None:
         """Resize exactly like Ctrl-T does."""
@@ -290,18 +288,14 @@ class wrtr(GlobalKeyHandler, App):
     async def on_file_browser_file_open(self, event: FileBrowser.FileOpen) -> None:
         path = event.path
         content = Path(path).read_text(encoding="utf-8")
-
-        # 1️⃣  Always open into the **focused** editor
-        focused = self.focused
-        if isinstance(focused, MarkdownEditor):
-            target_editor = focused
+        target = event.target
+        if target == "editor_b":
+            editor = self.query_one("#editor_b")
         else:
-            target_editor = self.query_one("#editor_a")
-
-        # 2️⃣  Load the file (no hiding anything)
-        target_editor.load_text(content)
-        target_editor.set_path(Path(path))
-        target_editor.focus()
+            editor = self.query_one("#editor_a")
+        editor.load_text(content)
+        editor.set_path(Path(path))
+        editor.focus()
 
         # 🔑  single layout recalculation
         self._layout_resize()
