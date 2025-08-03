@@ -10,6 +10,7 @@ from status_bar import EditorStatusBar
 from typing import Generator
 from textual.widget import Widget
 from tree_sitter_markdown import language
+from spellcheck import MarkdownSpellchecker
 
 
 class MarkdownEditor(Vertical):
@@ -22,6 +23,13 @@ class MarkdownEditor(Vertical):
         self._saved_path: Path | None = None
         self._save_timer: Timer | None = None
         self._debounce_delay: float = 1.0
+
+        # Inject spellchecker
+        self.spellchecker = MarkdownSpellchecker(
+            dictionary_path=str(Path(__file__).parent / "data" / "dictionary" / "frequency_dictionary_en_82_765.txt"),
+            user_dictionary_path=str(Path(__file__).parent / "data" / "dictionary" / "user_dictionary.txt")
+        )
+        self._spellcheck_active = False  # Track spellcheck mode state
 
     def compose(self) -> Generator[Widget, None, None]:
         """Inner composition: TextArea + StatusBar."""
@@ -85,32 +93,145 @@ class MarkdownEditor(Vertical):
         self.status_bar.saved = False
 
     async def on_key(self, event: Key) -> None:
-        if event.key == "ctrl+w" or getattr(event, 'name', None) == "ctrl_w":
-            self.clear_status()
-            browser = self.app.query_one("#file-browser")
-            editor_a = self.app.query_one("#editor_a")
-            editor_b = self.app.query_one("#editor_b")
-
-            if self.id == "editor_b":
-                editor_b.visible = False
-                editor_b.styles.display = 'none'
-                editor_b.styles.width = '0%'
-            elif self.id == "editor_a":
-                if editor_b.visible:
-                    content = editor_b.text
-                    editor_a.text = content
-                    editor_a.set_path(editor_b._saved_path)
-                    editor_b.clear_status()
-                    editor_b.visible = False
-                    editor_b.styles.display = 'none'
-                    editor_b.styles.width = '0%'
-                else:
-                    editor_a.clear_status()
-                    editor_a.text = ''
-            # layout recalculation ...
-            editor_a.focus()
+        """Handle key events for spellcheck functionality."""
+        if event.key == "ctrl+f7":
+            # Toggle spellcheck mode
+            if not self._spellcheck_active:
+                self._start_spellcheck()
+            else:
+                self._exit_spellcheck()
             event.stop()
-            return
+        elif self._spellcheck_active:
+            if event.key == "f3":
+                # Navigate to next misspelled word
+                current_word = self.spellchecker.next_word()
+                print("Next word:", current_word)
+                self._update_spellcheck_display()  # Update display
+                event.stop()
+            elif event.key == "shift+f3":
+                # Navigate to previous misspelled word
+                current_word = self.spellchecker.previous_word()
+                print("Previous word:", current_word)
+                self._update_spellcheck_display()  # Update display
+                event.stop()
+            elif event.key == "ctrl+a":
+                # Add current word to dictionary
+                current_word = self.spellchecker.get_current_word()
+                if current_word:
+                    self.spellchecker.add_to_dictionary(current_word[0])
+                    print(f"Added '{current_word[0]}' to dictionary.")
+                event.stop()
+            elif event.key == "ctrl+i":
+                # Ignore current word
+                current_word = self.spellchecker.get_current_word()
+                if current_word:
+                    self.spellchecker.ignore_word(current_word[0])
+                    print(f"Ignored '{current_word[0]}'.")
+                event.stop()
+            elif event.key.startswith("ctrl+") and event.key[-1].isdigit():
+                # Replace current word with a suggestion using Ctrl+1 to Ctrl+5
+                suggestion_index = int(event.key[-1]) - 1
+                current_word = self.spellchecker.get_current_word()
+                if current_word and suggestion_index < len(current_word[1]):
+                    suggestion = current_word[1][suggestion_index].term
+                    print(f"Replaced '{current_word[0]}' with '{suggestion}'.")
+                event.stop()
+            elif event.key == "escape":
+                # Exit spellcheck mode
+                self._exit_spellcheck()
+                event.stop()
 
-# Remove custom tree-sitter registration for now
-# TextArea should handle markdown built-in or fall back gracefully
+    def _start_spellcheck(self):
+        """Start spellcheck mode."""
+        self._spellcheck_active = True
+        print("Spellcheck mode activated.")
+
+        # Check the current text for misspelled words
+        misspelled_words = self.spellchecker.check_text(self.text)
+        print("Misspelled words:", misspelled_words)
+
+        # Update the status bar with spellcheck mode
+        self.status_bar.enter_spellcheck_mode()
+        if misspelled_words:
+            current_word = self.spellchecker.get_current_word()
+            self.status_bar.set_spellcheck_info(
+                word=current_word[0],
+                suggestions=[s.term for s in current_word[1]],
+                progress=(1, len(misspelled_words))
+            )
+        else:
+            self.status_bar.set_spellcheck_info(None, [], (0, 0))
+
+    def _exit_spellcheck(self):
+        """Exit spellcheck mode."""
+        self._spellcheck_active = False
+        print("Spellcheck mode deactivated.")
+
+        # Reset the status bar
+        self.status_bar.exit_spellcheck_mode()
+
+    def _convert_cursor_to_text_position(self, cursor_row: int, cursor_col: int) -> int:
+        """Convert TextArea cursor position to absolute text position."""
+        lines = self.text.split('\n')
+        pos = 0
+
+        for i in range(min(cursor_row, len(lines))):
+            if i < cursor_row:
+                pos += len(lines[i]) + 1  # +1 for newline
+            else:
+                pos += min(cursor_col, len(lines[i]))
+                break
+
+        if cursor_row < len(lines):
+            pos += min(cursor_col, len(lines[cursor_row]))
+
+        return pos
+
+    def _convert_text_position_to_cursor(self, text_pos: int) -> tuple[int, int]:
+        """Convert absolute text position to TextArea cursor position."""
+        lines = self.text.split('\n')
+        current_pos = 0
+
+        for line_num, line in enumerate(lines):
+            line_end = current_pos + len(line)
+
+            if text_pos <= line_end:
+                col = text_pos - current_pos
+                return (line_num, col)
+
+            current_pos = line_end + 1  # +1 for newline
+
+        # If position is beyond text, go to end
+        if lines:
+            return (len(lines) - 1, len(lines[-1]))
+        return (0, 0)
+
+    def _update_spellcheck_display(self):
+        """Update the status bar with current spellcheck info and move cursor to the word."""
+        current_word = self.spellchecker.get_current_word()
+        if current_word:
+            # Update status bar with current word and suggestions
+            progress = (self.spellchecker.current_index + 1, len(self.spellchecker.misspelled_words))
+            self.status_bar.set_spellcheck_info(
+                word=current_word[0],
+                suggestions=[s.term for s in current_word[1]],
+                progress=progress
+            )
+
+            # Move cursor to the misspelled word
+            word_start = self.text.find(current_word[0])
+            if word_start != -1:
+                cursor_row, cursor_col = self._convert_text_position_to_cursor(word_start)
+                print(f"Calculated cursor position: row={cursor_row}, col={cursor_col}")
+                self.text_area.cursor_location = (cursor_row, cursor_col)
+                print(f"Cursor position set to: {self.text_area.cursor_location}")
+
+                # Ensure the cursor is visible
+                self.text_area.scroll_cursor_visible(center=True)
+
+                # Ensure the TextArea is focused and refreshed
+                self.text_area.focus()
+                self.text_area.refresh()
+        else:
+            # Clear status bar if no misspelled words
+            self.status_bar.set_spellcheck_info(None, [], (0, 0))
