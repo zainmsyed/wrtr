@@ -94,7 +94,48 @@ class MarkdownEditor(Vertical):
         self.status_bar.saved = False
 
     async def on_key(self, event: Key) -> None:
-        """Handle key events for spellcheck functionality."""
+        """Handle key events for spellcheck and editor functionality."""
+        if event.key == "ctrl+w" or getattr(event, 'name', None) == "ctrl_w":
+            browser = self.app.query_one("#file-browser")
+            editor_a = self.app.query_one("#editor_a")
+            editor_b = self.app.query_one("#editor_b")
+
+            if self.id == "editor_b":
+                # Close editor_b
+                editor_b.visible = False
+                editor_b.styles.display = 'none'
+                editor_b.styles.width = '0%'
+            elif self.id == "editor_a":
+                if editor_b.visible:
+                    # Transfer content and path from editor_b to editor_a
+                    editor_a.text = editor_b.text
+                    editor_a.set_path(editor_b._saved_path)
+                    editor_b.clear_status()
+                    editor_b.visible = False
+                    editor_b.styles.display = 'none'
+                    editor_b.styles.width = '0%'
+                else:
+                    # Clear editor_a if no other pane is visible
+                    editor_a.clear_status()
+                    editor_a.text = ''
+
+            # Recalculate layout to fix any overflow issues
+            self.app._layout_resize()
+
+            # Focus the remaining editor
+            editor_a.focus()
+            event.stop()
+            return
+
+        if event.key == "f7":
+            # Toggle spellcheck mode
+            if not self._spellcheck_active:
+                self._start_spellcheck()
+            else:
+                self._exit_spellcheck()
+            event.stop()
+            return
+
         if event.key == "ctrl+f7":
             # Toggle spellcheck mode
             if not self._spellcheck_active:
@@ -103,6 +144,11 @@ class MarkdownEditor(Vertical):
                 self._exit_spellcheck()
             event.stop()
         elif self._spellcheck_active:
+            # Exit spellcheck mode on Escape before other keys
+            if event.key == "escape":
+                self._exit_spellcheck()
+                event.stop()
+                return
             if event.key == "f3":
                 # Navigate to next misspelled word
                 current_word = self.spellchecker.next_word()
@@ -123,11 +169,10 @@ class MarkdownEditor(Vertical):
                     print(f"Added '{current_word[0]}' to dictionary.")
                 event.stop()
             elif event.key == "ctrl+i":
-                # Ignore current word
-                current_word = self.spellchecker.get_current_word()
-                if current_word:
-                    self.spellchecker.ignore_word(current_word[0])
-                    print(f"Ignored '{current_word[0]}'.")
+                # Navigate to next misspelled word (similar to F3 behavior)
+                current_word = self.spellchecker.next_word()
+                print("Next word:", current_word)
+                self._update_spellcheck_display()  # Update display
                 event.stop()
             elif event.key.startswith("ctrl+") and event.key[-1].isdigit():
                 # Replace current word with a suggestion using Ctrl+1 to Ctrl+5
@@ -148,16 +193,33 @@ class MarkdownEditor(Vertical):
                         insert=suggestion
                     )
 
+                    # Force TextArea to update its buffer
+                    self.text_area.text = self.text_area.text
+
+                    # Recalculate all misspelled word positions
+                    self.spellchecker.check_text(self.text)
+
+                    # Navigate to the next misspelled word
+                    self.spellchecker.next_word()
+                    self._update_spellcheck_display()
+
                     # update cursor reactively (no manual refresh)
                     new_pos = word_start + len(suggestion)
                     row, col = self._convert_text_position_to_cursor(new_pos)
                     self.text_area.cursor_row = row
                     self.text_area.cursor_column = col
+
                 event.stop()
-            elif event.key == "escape":
-                # Exit spellcheck mode
+        elif event.key == "escape":
+            # Exit spellcheck mode if active
+            if self._spellcheck_active:
                 self._exit_spellcheck()
+                # Stop event propagation to prevent global handlers from triggering
                 event.stop()
+                return
+        else:
+            # Clear status bar if no misspelled words
+            self.status_bar.set_spellcheck_info(None, [], (0, 0))
 
     def _start_spellcheck(self):
         """Start spellcheck mode."""
@@ -174,7 +236,7 @@ class MarkdownEditor(Vertical):
             current_word = self.spellchecker.get_current_word()
             self.status_bar.set_spellcheck_info(
                 word=current_word[0],
-                suggestions=[s.term for s in current_word[1]],
+                suggestions=[s.term for s in current_word[1]],  # Convert SuggestItem to string
                 progress=(1, len(misspelled_words))
             )
         else:

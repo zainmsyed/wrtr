@@ -30,6 +30,7 @@ from textual.widgets import TextArea  # for save shortcut focus handling
 from global_keys import GlobalKeyHandler
 from recent_manager import RecentManager
 import shutil
+from textual.events import Key
 
 
 class wrtr(GlobalKeyHandler, App):
@@ -416,8 +417,25 @@ class wrtr(GlobalKeyHandler, App):
                 shutil.rmtree(path)
             else:
                 path.unlink()
+
+            # Check if the deleted file is open in any editor
+            editor_a = self.query_one("#editor_a")
+            editor_b = self.query_one("#editor_b")
+
+            if editor_a._saved_path == path:
+                # Focus editor_a and close it
+                editor_a.focus()
+                await self.action_close_pane()
+            elif editor_b._saved_path == path:
+                # Focus editor_b and close it
+                editor_b.focus()
+                await self.action_close_pane()
+
             self.notify(f"Deleted → {path.name}", severity="information")
             self.query_one("#file-browser").reload()
+
+            # Recalculate layout to resize remaining panes
+            self._layout_resize()
         except Exception as e:
             self.notify(f"Delete failed: {e}", severity="error")
 
@@ -471,6 +489,11 @@ class wrtr(GlobalKeyHandler, App):
                 focused.status_bar.exit_spellcheck_mode()
         else:
             print("[DEBUG] Focused widget is not a MarkdownEditor.")
+
+    async def on_key(self, event: Key) -> None:
+        """Handle global key events."""
+        # Pass all keys to the parent handler
+        super().on_key(event)
 
 
 if __name__ == "__main__":

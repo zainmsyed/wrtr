@@ -21,6 +21,12 @@ class GlobalKeyHandler:
                 return
 
             if isinstance(self, App):
+                # Check if spellcheck mode is active in the editor
+                if hasattr(self.app, 'editor') and self.app.editor._spellcheck_active:
+                    self.app.editor._exit_spellcheck()
+                    event.stop()
+                    return
+
                 self.action_to_home()
                 event.stop()
                 return
