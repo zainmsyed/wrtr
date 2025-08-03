@@ -50,6 +50,7 @@ class wrtr(GlobalKeyHandler, App):
         ("ctrl+o", "cycle_root", "Toggle Root"),
         ("ctrl+w", "close_pane", "Close Pane"),
         ("ctrl+s", "save_file", "Save"),
+        ("ctrl+f7", "toggle_spell_check", "Toggle Spell Check"),
 
         # keys that belong to the HomeScreen
         ("n", "home_new_file",     "New File"),
@@ -450,6 +451,26 @@ class wrtr(GlobalKeyHandler, App):
         if len(self.screen_stack) > 1:
             self.pop_screen()
         return await self.push_screen_wait(screen)
+
+    async def action_toggle_spell_check(self) -> None:
+        """Toggle spellcheck mode in the focused editor."""
+        focused = self.focused
+        print(f"[DEBUG] Focused widget: {focused}")
+
+        # Check if the focused widget is a TextArea and get its parent MarkdownEditor
+        if isinstance(focused, TextArea) and isinstance(focused.parent, MarkdownEditor):
+            focused = focused.parent
+
+        if isinstance(focused, MarkdownEditor):
+            print("[DEBUG] Focused widget is a MarkdownEditor.")
+            if not focused.status_bar.spellcheck_mode:
+                print("[DEBUG] Entering spellcheck mode.")
+                focused.status_bar.enter_spellcheck_mode()
+            else:
+                print("[DEBUG] Exiting spellcheck mode.")
+                focused.status_bar.exit_spellcheck_mode()
+        else:
+            print("[DEBUG] Focused widget is not a MarkdownEditor.")
 
 
 if __name__ == "__main__":
