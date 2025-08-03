@@ -11,6 +11,7 @@ from typing import Generator
 from textual.widget import Widget
 from tree_sitter_markdown import language
 from spellcheck import MarkdownSpellchecker
+import re
 
 
 class MarkdownEditor(Vertical):
@@ -142,13 +143,16 @@ class MarkdownEditor(Vertical):
 
                     # Replace the word in the TextArea
                     self.text_area.replace(
-                        start=self._convert_text_position_to_cursor(word_start),  # Start location
-                        end=self._convert_text_position_to_cursor(word_end),      # End location
-                        insert=suggestion                                         # Replacement text
+                        start=self._convert_text_position_to_cursor(word_start),
+                        end=self._convert_text_position_to_cursor(word_end),
+                        insert=suggestion
                     )
 
-                    # Refresh the TextArea to reflect changes
-                    self.text_area.refresh()
+                    # update cursor reactively (no manual refresh)
+                    new_pos = word_start + len(suggestion)
+                    row, col = self._convert_text_position_to_cursor(new_pos)
+                    self.text_area.cursor_row = row
+                    self.text_area.cursor_column = col
                 event.stop()
             elif event.key == "escape":
                 # Exit spellcheck mode
@@ -232,20 +236,25 @@ class MarkdownEditor(Vertical):
                 progress=progress
             )
 
-            # Move cursor to the misspelled word
-            word_start = self.text.find(current_word[0])
+            # Use the position provided by the spellchecker
+            word_start = current_word[2]  # Position is now stored as the third element
+            print(f"Word start position: {word_start}")
+
             if word_start != -1:
                 cursor_row, cursor_col = self._convert_text_position_to_cursor(word_start)
-                print(f"Calculated cursor position: row={cursor_row}, col={cursor_col}")
+                print(f"Cursor position calculated: row={cursor_row}, col={cursor_col}")
+
+                # Set cursor location directly
                 self.text_area.cursor_location = (cursor_row, cursor_col)
                 print(f"Cursor position set to: {self.text_area.cursor_location}")
 
                 # Ensure the cursor is visible
                 self.text_area.scroll_cursor_visible(center=True)
 
-                # Ensure the TextArea is focused and refreshed
+                # Focus the TextArea
                 self.text_area.focus()
-                self.text_area.refresh()
+            else:
+                print(f"Word '{current_word[0]}' not found at index {self.spellchecker.current_index}")
         else:
             # Clear status bar if no misspelled words
             self.status_bar.set_spellcheck_info(None, [], (0, 0))

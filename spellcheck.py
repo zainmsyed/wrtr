@@ -49,14 +49,23 @@ class MarkdownSpellchecker:
             self.symspell.load_dictionary(self.user_dictionary_path, term_index=0, count_index=1)
 
     def check_text(self, text: str):
-        """Check text for misspelled words."""
+        """Check text for misspelled words and record their positions."""
         words = text.split()
         self.misspelled_words = []  # Reset misspelled words
+        current_pos = 0
         for word in words:
+            # find actual position of this word starting from last position
+            word_pos = text.find(word, current_pos)
+            if word_pos == -1:
+                continue
+            # get suggestions: first strict, then fuzzy
             suggestions = self.symspell.lookup(word, Verbosity.CLOSEST, max_edit_distance=0)
             if not suggestions:
                 suggestions = self.symspell.lookup(word, Verbosity.CLOSEST, max_edit_distance=2)
-                self.misspelled_words.append((word, suggestions))
+                # store word, suggestion list, and absolute position
+                self.misspelled_words.append((word, suggestions, word_pos))
+            # advance search position
+            current_pos = word_pos + len(word)
         self.current_index = 0 if self.misspelled_words else -1
         return self.misspelled_words
 
@@ -67,16 +76,16 @@ class MarkdownSpellchecker:
         return None
 
     def next_word(self):
-        """Move to the next misspelled word."""
-        if self.misspelled_words:
-            self.current_index = (self.current_index + 1) % len(self.misspelled_words)
+        """Move to the next misspelled word without wrapping."""
+        if self.misspelled_words and self.current_index < len(self.misspelled_words) - 1:
+            self.current_index += 1
             return self.get_current_word()
         return None
 
     def previous_word(self):
-        """Move to the previous misspelled word."""
-        if self.misspelled_words:
-            self.current_index = (self.current_index - 1) % len(self.misspelled_words)
+        """Move to the previous misspelled word without wrapping."""
+        if self.misspelled_words and self.current_index > 0:
+            self.current_index -= 1
             return self.get_current_word()
         return None
 
