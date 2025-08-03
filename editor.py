@@ -135,6 +135,20 @@ class MarkdownEditor(Vertical):
                 if current_word and suggestion_index < len(current_word[1]):
                     suggestion = current_word[1][suggestion_index].term
                     print(f"Replaced '{current_word[0]}' with '{suggestion}'.")
+
+                    # Find the start and end positions of the current word
+                    word_start = self.text.find(current_word[0])
+                    word_end = word_start + len(current_word[0])
+
+                    # Replace the word in the TextArea
+                    self.text_area.replace(
+                        start=self._convert_text_position_to_cursor(word_start),  # Start location
+                        end=self._convert_text_position_to_cursor(word_end),      # End location
+                        insert=suggestion                                         # Replacement text
+                    )
+
+                    # Refresh the TextArea to reflect changes
+                    self.text_area.refresh()
                 event.stop()
             elif event.key == "escape":
                 # Exit spellcheck mode
