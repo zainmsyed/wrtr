@@ -3,41 +3,49 @@
 Here’s a quick reference for Wrtr’s key bindings to keep you productive:
 
 ## Global Key Bindings
-- **Ctrl+N**: Create a new file.
-- **Ctrl+F**: Open the search pane.
-- **Ctrl+S**: Save the current file.
-- **Ctrl+W**: Close the active editor pane.
-- **Ctrl+1, Ctrl+2**: Switch between workspaces 1 and 2. (coming soon)
-- **Tab**: Cycle focus between panes.
-- **Escape**: Go back to the Home screen or close modals/pop-ups.
+- **Ctrl+N**: Create a new file
+- **Ctrl+F**: Show the search pane
+- **Ctrl+S**: Save the current file
+- **Ctrl+W**: Close the active editor pane
+- **Ctrl+T**: Toggle file browser visibility
+- **Ctrl+O**: Toggle file browser root (wrtr folder ↔ system root)
+- **Ctrl+F7**: Toggle spell-check mode
+- **Tab**: Cycle focus between panes
+- **Escape**: Back to Home screen or close modals/pop-ups
+- **Delete**: Delete the selected file or folder
+
+## Spell-Check Mode
+- **F3**: Move to next misspelled word
+- **Shift+F3**: Move to previous misspelled word
+- **Ctrl+I**: Move to next misspelled word (alternative)
+- **Ctrl+A**: Add current misspelled word to user dictionary and advance
+
+## Spell-Check Suggestions
+- **Ctrl+1** to **Ctrl+5**: Replace current misspelled word with suggestion 1–5
 
 ## Home Screen
-When the application starts, you can use these single keys:
-- **N**: Create a new file.
-- **R**: Show recent files.
-- **B**: Browse files.
-- **Q**: Quit the application.
+When the application starts, use these single keys:
+- **N**: Create a new file
+- **R**: Open recent files
+- **B**: Browse files
+- **Q**: Quit the application
 
-## File Browser
-- **Ctrl+T**: Toggle the file browser visibility.
-- **Up/Down Arrow**: Navigate files and folders.
-- **Enter**: Open the selected file.
-- **Delete**: Delete the selected file or folder.
-- **n**: Create a new file.
-- **Shift+N**: Create a new folder.
-- **r**: Rename the selected file or folder.
-
-## Editor
-Standard text editing shortcuts are available:
-- **Ctrl+Z**: Undo.
-- **Ctrl+Y**: Redo.
-- **Ctrl+X**: Cut.
-- **Ctrl+C**: Copy.
-- **Ctrl+V**: Paste.
+## File Browser Navigation
+- **Up/Down Arrow**: Navigate files and folders
+- **Enter**: Open the selected file or folder
+- **Delete**: Delete the selected file or folder
+- **N**: Create a new file in the current directory
+- **Shift+N**: Create a new folder
+- **R**: Rename the selected file or folder
 
 ## Search Pane
-- **Up/Down Arrow**: Navigate search results.
-- **Enter**: Open the selected result in the editor.
-- **Esc**: Close the search pane.
+- **Up/Down Arrow**: Navigate search results
+- **Enter**: Open the selected result in the editor
+- **Escape**: Close the search pane
 
-Keep this handy and happy writing!
+## Editor (Standard Text Shortcuts)
+- **Ctrl+Z**: Undo
+- **Ctrl+Y**: Redo
+- **Ctrl+X**: Cut
+- **Ctrl+C**: Copy
+- **Ctrl+V**: Paste
