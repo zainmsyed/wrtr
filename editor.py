@@ -27,8 +27,8 @@ class MarkdownEditor(Vertical):
 
         # Inject spellchecker
         self.spellchecker = MarkdownSpellchecker(
-            dictionary_path=str(Path(__file__).parent / "data" / "dictionary" / "frequency_dictionary_en_82_765.txt"),
-            user_dictionary_path=str(Path(__file__).parent / "data" / "dictionary" / "user_dictionary.txt")
+            dictionary_path=str(Path(__file__).parent / "wrtr" / "data" / "dictionary" / "frequency_dictionary_en_82_765.txt"),
+            user_dictionary_path=str(Path(__file__).parent / "wrtr" / "data" / "dictionary" / "user_dictionary.txt")
         )
         self._spellcheck_active = False  # Track spellcheck mode state
 
@@ -162,11 +162,16 @@ class MarkdownEditor(Vertical):
                 self._update_spellcheck_display()  # Update display
                 event.stop()
             elif event.key == "ctrl+a":
-                # Add current word to dictionary
+                # Add current word to dictionary and move to the next misspelled word
                 current_word = self.spellchecker.get_current_word()
                 if current_word:
                     self.spellchecker.add_to_dictionary(current_word[0])
                     print(f"Added '{current_word[0]}' to dictionary.")
+                    self._show_notification(f"'{current_word[0]}' added to dictionary.")
+                    # Move to the next misspelled word
+                    next_word = self.spellchecker.next_word()
+                    print("Next word:", next_word)
+                    self._update_spellcheck_display()  # Update display
                 event.stop()
             elif event.key == "ctrl+i":
                 # Navigate to next misspelled word (similar to F3 behavior)
@@ -220,6 +225,11 @@ class MarkdownEditor(Vertical):
         else:
             # Clear status bar if no misspelled words
             self.status_bar.set_spellcheck_info(None, [], (0, 0))
+
+    def _show_notification(self, message: str):
+        """Display a notification to the user."""
+        # Placeholder implementation for notification
+        print(f"Notification: {message}")
 
     def _start_spellcheck(self):
         """Start spellcheck mode."""

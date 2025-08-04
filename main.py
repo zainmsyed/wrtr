@@ -60,6 +60,7 @@ class wrtr(GlobalKeyHandler, App):
         ("q", "home_quit",         "Quit"),
     ]
 
+    # Default workspace directory for Terminal Writer
     DEFAULT_DIR = Path(__file__).with_suffix('').parent / "wrtr"
     SEED_DIR = Path(get_resource_path("docs"))
 

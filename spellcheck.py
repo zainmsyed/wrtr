@@ -9,7 +9,7 @@ class MarkdownSpellchecker:
 
     def __init__(self, dictionary_path: str = None, user_dictionary_path: str = None):
         # Default to the `wrtr` folder if paths are not provided
-        base_path = Path(__file__).parent / "wrtr" / "data" / "dictionary"
+        base_path = Path(__file__).parent / "wrtr"
         self.dictionary_path = dictionary_path or str(base_path / "frequency_dictionary_en_82_765.txt")
         self.user_dictionary_path = user_dictionary_path or str(base_path / "user_dictionary.txt")
         self.symspell = SymSpell(max_dictionary_edit_distance=2, prefix_length=7)
