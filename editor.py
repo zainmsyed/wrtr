@@ -204,8 +204,20 @@ class MarkdownEditor(Vertical):
                     # Recalculate all misspelled word positions
                     self.spellchecker.check_text(self.text)
 
-                    # Navigate to the next misspelled word
-                    self.spellchecker.next_word()
+                    # Determine next index based on replaced position
+                    new_misspelled = self.spellchecker.misspelled_words
+                    # Find first misspelled word after this position
+                    next_index = None
+                    for idx, w in enumerate(new_misspelled):
+                        if w[2] > word_start:
+                            next_index = idx
+                            break
+                    # If none found, wrap to end
+                    if next_index is None:
+                        next_index = len(new_misspelled) - 1
+                    self.spellchecker.current_index = next_index
+
+                    # Update display at new position
                     self._update_spellcheck_display()
 
                     # update cursor reactively (no manual refresh)
@@ -249,6 +261,15 @@ class MarkdownEditor(Vertical):
                 suggestions=[s.term for s in current_word[1]],  # Convert SuggestItem to string
                 progress=(1, len(misspelled_words))
             )
+
+            # Move cursor to the first misspelled word
+            word_start = current_word[2]
+            if word_start != -1:
+                row, col = self._convert_text_position_to_cursor(word_start)
+                self.text_area.cursor_location = (row, col)
+                self.text_area.scroll_cursor_visible(center=True)
+                self.text_area.focus()
+                print(f"Cursor moved to first misspelled word at {row}, {col}")
         else:
             self.status_bar.set_spellcheck_info(None, [], (0, 0))
 
@@ -330,3 +351,27 @@ class MarkdownEditor(Vertical):
         else:
             # Clear status bar if no misspelled words
             self.status_bar.set_spellcheck_info(None, [], (0, 0))
+
+    async def activate_spellcheck_and_focus_first_misspelled_word(self):
+        """Activate spellcheck and move cursor to the first misspelled word."""
+        self._start_spellcheck()
+
+        # Wait for the spellcheck process to complete
+        await self.app.run_in_thread(self.spellchecker.check_text, self.text)
+
+        # Ensure misspelled words are populated
+        misspelled_words = self.spellchecker.misspelled_words
+        if not misspelled_words:
+            print("No misspelled words found.")
+            return
+
+        # Move to the first misspelled word
+        current_word = self.spellchecker.get_current_word()
+        if current_word:
+            word_start = current_word[2]  # Position of the first misspelled word
+            if word_start != -1:
+                cursor_row, cursor_col = self._convert_text_position_to_cursor(word_start)
+                self.text_area.cursor_location = (cursor_row, cursor_col)
+                self.text_area.scroll_cursor_visible(center=True)
+                self.text_area.focus()
+                print(f"Cursor moved to first misspelled word: {current_word[0]} at {cursor_row}, {cursor_col}")
