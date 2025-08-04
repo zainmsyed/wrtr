@@ -24,6 +24,14 @@ class SimpleSpellchecker:
         """Correct all words in a text string."""
         return " ".join(self.correct_word(w) for w in text.split())
 
+    def add_to_dictionary(self, word: str) -> None:
+        """Add a word to the SymSpell dictionary to prevent future flagging."""
+        # Create a new entry with count=1; treat as input term
+        try:
+            self.symspell.create_dictionary_entry(word, 1)
+        except Exception:
+            pass
+
 if __name__ == "__main__":
     sc = SimpleSpellchecker()
     print(sc.correct_word("tsting"))      # expect 'testing'
@@ -38,6 +46,21 @@ class MarkdownSpellchecker(SimpleSpellchecker):
         # ignore provided paths in this simple implementation
         super().__init__(max_dictionary_edit_distance=max_dictionary_edit_distance,
                          prefix_length=prefix_length)
+        self.user_terms: set[str] = set()
+        # Load user dictionary if provided
+        if user_dictionary_path:
+            try:
+                with open(user_dictionary_path, 'r', encoding='utf-8') as uf:
+                    for line in uf:
+                        parts = line.strip().split()
+                        if not parts:
+                            continue
+                        term = parts[0].lower()
+                        self.user_terms.add(term)
+                        # Also add to symspell dictionary
+                        self.symspell.create_dictionary_entry(term, 1)
+            except Exception:
+                pass
         self.misspelled_words: list[tuple[str, list, int]] = []
         self.current_index: int = -1
 
@@ -59,6 +82,9 @@ class MarkdownSpellchecker(SimpleSpellchecker):
         for m in re.finditer(r"\b[\w']+\b", text):
             word = m.group()
             pos = m.start()
+            # Skip user-defined terms
+            if word.lower() in getattr(self, 'user_terms', set()):
+                continue
             # Skip words that are part of a URL or markdown link
             if any(start <= pos < end for start, end in url_spans):
                 continue

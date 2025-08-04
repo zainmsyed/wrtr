@@ -79,8 +79,8 @@ class MarkdownEditor(Vertical):
             self._saved_path.write_text(self.text)
             self.status_bar.saved = True
             try:
-                # Commented out auto-save notification for quieter operation
-                # self.app.notify(f"Auto-saved {self._saved_path.name}")
+                    # Commented out auto-save notification for quieter operation
+                    # self.app.notify(f"Auto-saved {self._saved_path.name}")
                 pass
             except Exception:
                 pass
@@ -118,17 +118,17 @@ class MarkdownEditor(Vertical):
                     # Clear editor_a if no other pane is visible
                     editor_a.clear_status()
                     editor_a.text = ''
-
+                            # print("Next word:", current_word)
             # Recalculate layout to fix any overflow issues
             self.app._layout_resize()
 
             # Focus the remaining editor
-            editor_a.focus()
+                                # print(f"Replaced '{current_word[0]}' with '{suggestion}'.")
             event.stop()
             return
 
         if event.key == "f7":
-            # Toggle spellcheck mode
+                    # print(f"Notification: {message}")
             if not self._spellcheck_active:
                 self._start_spellcheck()
             else:
@@ -152,26 +152,33 @@ class MarkdownEditor(Vertical):
             if event.key == "f3":
                 # Navigate to next misspelled word
                 current_word = self.spellchecker.next_word()
-                print("Next word:", current_word)
+                # print("Next word:", current_word)
                 self._update_spellcheck_display()  # Update display
                 event.stop()
             elif event.key == "shift+f3":
                 # Navigate to previous misspelled word
                 current_word = self.spellchecker.previous_word()
-                print("Previous word:", current_word)
+                # print("Previous word:", current_word)
                 self._update_spellcheck_display()  # Update display
                 event.stop()
-            elif event.key == "ctrl+a":
-                # Add current word to dictionary and move to the next misspelled word
-                current_word = self.spellchecker.get_current_word()
-                if current_word:
-                    self.spellchecker.add_to_dictionary(current_word[0])
-                    print(f"Added '{current_word[0]}' to dictionary.")
-                    self._show_notification(f"'{current_word[0]}' added to dictionary.")
-                    # Move to the next misspelled word
-                    next_word = self.spellchecker.next_word()
-                    print("Next word:", next_word)
-                    self._update_spellcheck_display()  # Update display
+            # Add current word to dictionary
+            elif event.key == "ctrl+a" or getattr(event, 'name', None) == "ctrl_a":
+                # Add current misspelled word to dictionary, then re-check text
+                current = self.spellchecker.get_current_word()
+                if current:
+                    word = current[0]
+                    self.spellchecker.add_to_dictionary(word)
+                    # print(f"Added '{word}' to dictionary.")
+                    self._show_notification(f"'{word}' added to dictionary.")
+                    # Re-run spellcheck to remove from misspelled list
+                    misspelled = self.spellchecker.check_text(self.text)
+                    if misspelled:
+                        # Reset to first misspelled word
+                        self.spellchecker.current_index = 0
+                        self._update_spellcheck_display()
+                    else:
+                        # No more misspelled words: exit spellcheck mode
+                        self._exit_spellcheck()
                 event.stop()
             elif event.key == "ctrl+i":
                 # Navigate to next misspelled word (similar to F3 behavior)
@@ -246,11 +253,12 @@ class MarkdownEditor(Vertical):
     def _start_spellcheck(self):
         """Start spellcheck mode."""
         self._spellcheck_active = True
-        print("Spellcheck mode activated.")
+    # print("Spellcheck mode activated.")
 
         # Check the current text for misspelled words
+    # print("Text being checked for spellcheck:", self.text)  # Debug statement
         misspelled_words = self.spellchecker.check_text(self.text)
-        print("Misspelled words:", misspelled_words)
+    # print("Misspelled words identified:", misspelled_words)  # Debug statement
 
         # Update the status bar with spellcheck mode
         self.status_bar.enter_spellcheck_mode()
@@ -269,14 +277,14 @@ class MarkdownEditor(Vertical):
                 self.text_area.cursor_location = (row, col)
                 self.text_area.scroll_cursor_visible(center=True)
                 self.text_area.focus()
-                print(f"Cursor moved to first misspelled word at {row}, {col}")
+                # print(f"Cursor moved to first misspelled word at {row}, {col}")
         else:
             self.status_bar.set_spellcheck_info(None, [], (0, 0))
 
     def _exit_spellcheck(self):
         """Exit spellcheck mode."""
         self._spellcheck_active = False
-        print("Spellcheck mode deactivated.")
+    # print("Spellcheck mode deactivated.")
 
         # Reset the status bar
         self.status_bar.exit_spellcheck_mode()
@@ -331,15 +339,15 @@ class MarkdownEditor(Vertical):
 
             # Use the position provided by the spellchecker
             word_start = current_word[2]  # Position is now stored as the third element
-            print(f"Word start position: {word_start}")
+            # print(f"Word start position: {word_start}")
 
             if word_start != -1:
                 cursor_row, cursor_col = self._convert_text_position_to_cursor(word_start)
-                print(f"Cursor position calculated: row={cursor_row}, col={cursor_col}")
+                # print(f"Cursor position calculated: row={cursor_row}, col={cursor_col}")
 
                 # Set cursor location directly
                 self.text_area.cursor_location = (cursor_row, cursor_col)
-                print(f"Cursor position set to: {self.text_area.cursor_location}")
+                # print(f"Cursor position set to: {self.text_area.cursor_location}")
 
                 # Ensure the cursor is visible
                 self.text_area.scroll_cursor_visible(center=True)
@@ -347,7 +355,8 @@ class MarkdownEditor(Vertical):
                 # Focus the TextArea
                 self.text_area.focus()
             else:
-                print(f"Word '{current_word[0]}' not found at index {self.spellchecker.current_index}")
+                # print(f"Word '{current_word[0]}' not found at index {self.spellchecker.current_index}")
+                pass
         else:
             # Clear status bar if no misspelled words
             self.status_bar.set_spellcheck_info(None, [], (0, 0))
@@ -362,7 +371,7 @@ class MarkdownEditor(Vertical):
         # Ensure misspelled words are populated
         misspelled_words = self.spellchecker.misspelled_words
         if not misspelled_words:
-            print("No misspelled words found.")
+            # print("No misspelled words found.")
             return
 
         # Move to the first misspelled word
@@ -374,4 +383,4 @@ class MarkdownEditor(Vertical):
                 self.text_area.cursor_location = (cursor_row, cursor_col)
                 self.text_area.scroll_cursor_visible(center=True)
                 self.text_area.focus()
-                print(f"Cursor moved to first misspelled word: {current_word[0]} at {cursor_row}, {cursor_col}")
+                # print(f"Cursor moved to first misspelled word: {current_word[0]} at {cursor_row}, {cursor_col}")
