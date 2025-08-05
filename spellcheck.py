@@ -90,8 +90,11 @@ class MarkdownSpellchecker(SimpleSpellchecker):
             # Skip words that are part of a URL or markdown link
             if any(start <= pos < end for start, end in url_spans):
                 continue
-            # Skip ordinal numbers
+            # Skip ordinal numbers (e.g., 1st, 2nd)
             if ordinal_pattern.match(word):
+                continue
+            # Skip pure numeric tokens (e.g., 1234)
+            if word.isdigit():
                 continue
             # Ignore words that start with uppercase (nouns and sentence starts)
             if word and word[0].isupper():
