@@ -46,18 +46,13 @@ class wrtr(GlobalKeyHandler, App):
         ("tab", "focus_next", "Cycle Pane"),
         ("ctrl+n", "new_file", "New File"),
         ("delete", "delete_item", "Delete"),
-        ("escape", "to_home", "Back to Home"),
+        ("escape", "handle_escape", "Handle Escape"),
         ("ctrl+t", "toggle_browser", "Toggle Browser"),
         ("ctrl+o", "cycle_root", "Toggle Root"),
         ("ctrl+w", "close_pane", "Close Pane"),
         ("ctrl+s", "save_file", "Save"),
         ("ctrl+f7", "toggle_spell_check", "Toggle Spell Check"),
-
-        # keys that belong to the HomeScreen
-        ("n", "home_new_file",     "New File"),
-        ("r", "home_recent_files", "Recent Files"),
-        ("b", "home_browse_files", "Browse Files"),
-        ("q", "home_quit",         "Quit"),
+        ("ctrl+shift+m", "toggle_markdown_preview", "Toggle MD Preview"),
     ]
 
     # Default workspace directory for Terminal Writer
@@ -491,10 +486,33 @@ class wrtr(GlobalKeyHandler, App):
         else:
             print("[DEBUG] Focused widget is not a MarkdownEditor.")
 
+    async def action_toggle_markdown_preview(self) -> None:
+        """Toggle markdown preview in the focused editor pane."""
+        focused = self.focused
+        # If focus is in TextArea or MarkdownViewer, find its MarkdownEditor parent
+        from textual.widgets import TextArea, MarkdownViewer
+        editor = None
+        if isinstance(focused, TextArea) and hasattr(focused, 'parent') and isinstance(focused.parent, MarkdownEditor):
+            editor = focused.parent
+        elif isinstance(focused, MarkdownViewer) and hasattr(focused, 'parent') and isinstance(focused.parent, MarkdownEditor):
+            editor = focused.parent
+        if editor:
+            editor.toggle_markdown_preview()
+
     async def on_key(self, event: Key) -> None:
         """Handle global key events."""
         # Pass all keys to the parent handler
         super().on_key(event)
+
+    def action_handle_escape(self) -> None:
+        """Close markdown preview if open (for any viewer), else go home."""
+        focused = self.focused
+        # If focused widget is a markdown preview, restore its editor
+        if hasattr(focused, 'parent') and hasattr(focused.parent, 'toggle_markdown_preview'):
+            focused.parent.toggle_markdown_preview()
+            return
+        # Otherwise, go back to HomeScreen
+        self.action_to_home()
 
 
 if __name__ == "__main__":

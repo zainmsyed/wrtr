@@ -38,8 +38,12 @@ class HomeScreen(Screen):
     """
 
     BINDINGS = [
-        ("up",   "focus_previous", "Focus Previous"),
-        ("down", "focus_next",     "Focus Next"),
+        ("up",   "focus_previous",    "Focus Previous"),
+        ("down", "focus_next",        "Focus Next"),
+        ("n",    "new_file",          "New File"),
+        ("r",    "recent_files",      "Recent Files"),
+        ("b",    "browse_files",      "Browse Files"),
+        ("q",    "quit",              "Quit"),
     ]
 
     def compose(self) -> ComposeResult:

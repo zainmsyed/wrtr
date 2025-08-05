@@ -2,6 +2,7 @@
 Module: Editor Pane
 """
 from textual.widgets import TextArea
+from markdown_preview import MarkdownPreviewMixin
 from textual.containers import Vertical
 from textual.events import Key
 from pathlib import Path
@@ -14,7 +15,7 @@ from spellcheck import MarkdownSpellchecker
 import re
 
 
-class MarkdownEditor(Vertical):
+class MarkdownEditor(MarkdownPreviewMixin, Vertical):
     """
     Markdown editor widget with syntax highlighting, auto-save,
     and a status bar that does NOT overlap the last line.
@@ -93,8 +94,16 @@ class MarkdownEditor(Vertical):
         self._schedule_auto_save()
         self.status_bar.saved = False
 
+
     async def on_key(self, event: Key) -> None:
-        """Handle key events for spellcheck and editor functionality."""
+        """Handle key events for the editor."""
+        print(f"[DEBUG] MarkdownEditor received key: {event.key}")
+        # Exit markdown preview on Escape
+        if hasattr(self, 'markdown_viewer') and event.key == "escape":
+            self.restore_text_area()
+            event.stop()
+            return
+        
         if event.key == "ctrl+w" or getattr(event, 'name', None) == "ctrl_w":
             browser = self.app.query_one("#file-browser")
             editor_a = self.app.query_one("#editor_a")
@@ -245,6 +254,7 @@ class MarkdownEditor(Vertical):
             # Clear status bar if no misspelled words
             self.status_bar.set_spellcheck_info(None, [], (0, 0))
 
+
     def _show_notification(self, message: str):
         """Display a notification to the user via Textual's notification system."""
         try:
@@ -388,3 +398,4 @@ class MarkdownEditor(Vertical):
                 self.text_area.scroll_cursor_visible(center=True)
                 self.text_area.focus()
                 # print(f"Cursor moved to first misspelled word: {current_word[0]} at {cursor_row}, {cursor_col}")
+
