@@ -151,12 +151,12 @@ class FileBrowser(DirectoryTree):
             # Point tree at the 'favorites' temp folder
             self.path = fav_dir
             self.reload()
-            self.app.notify("Root → favorites", severity="info")
+                # notification suppressed for root toggle
             return
         # Handle wrtr folder or computer root
         self.path = self._roots[self._cycle]
         self.reload()
-        self.app.notify(f"Root → {self.path}", severity="info")
+            # notification suppressed for root toggle
 
     def _refresh_fav_view(self) -> None:
         """Clear old temp directory and reload favorites view."""
