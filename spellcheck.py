@@ -47,6 +47,8 @@ class MarkdownSpellchecker(SimpleSpellchecker):
         super().__init__(max_dictionary_edit_distance=max_dictionary_edit_distance,
                          prefix_length=prefix_length)
         self.user_terms: set[str] = set()
+        # store user dictionary file path
+        self.user_dictionary_path = user_dictionary_path
         # Load user dictionary if provided
         if user_dictionary_path:
             try:
@@ -100,6 +102,24 @@ class MarkdownSpellchecker(SimpleSpellchecker):
                 self.misspelled_words.append((word, sugg, pos))
         self.current_index = 0 if self.misspelled_words else -1
         return self.misspelled_words
+    
+    def add_to_dictionary(self, word: str) -> None:
+        """Add a word to both SymSpell and the user dictionary file."""
+        # add to symspell and in-memory set
+        try:
+            super().add_to_dictionary(word)
+        except Exception:
+            pass
+        term = word.lower()
+        if term not in self.user_terms:
+            self.user_terms.add(term)
+            # persist to user dictionary file
+            if getattr(self, 'user_dictionary_path', None):
+                try:
+                    with open(self.user_dictionary_path, 'a', encoding='utf-8') as uf:
+                        uf.write(f"{term}\n")
+                except Exception:
+                    pass
 
     def get_current_word(self):
         """Return current word tuple or None."""

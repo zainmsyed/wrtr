@@ -246,9 +246,13 @@ class MarkdownEditor(Vertical):
             self.status_bar.set_spellcheck_info(None, [], (0, 0))
 
     def _show_notification(self, message: str):
-        """Display a notification to the user."""
-        # Placeholder implementation for notification
-        print(f"Notification: {message}")
+        """Display a notification to the user via Textual's notification system."""
+        try:
+            # Use the app's notify method to show a toast message
+            self.app.notify(message, severity="info")
+        except Exception:
+            # Fallback to printing if notification fails
+            print(f"Notification: {message}")
 
     def _start_spellcheck(self):
         """Start spellcheck mode."""
