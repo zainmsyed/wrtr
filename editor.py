@@ -41,7 +41,7 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
     def compose(self) -> Generator[Widget, None, None]:
         """Inner composition: TextArea + StatusBar."""
         self.text_area = TextArea(text="", language="markdown")
-        self.text_area.styles.padding = (1, 2)  # Add padding: 1 line vertical, 2 spaces horizontal
+        self.text_area.styles.padding = (2, 3)  # Updated padding: 2 lines vertical, 3 spaces horizontal
         self.status_bar = EditorStatusBar()
         yield self.text_area
         yield self.status_bar

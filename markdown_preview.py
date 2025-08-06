@@ -43,9 +43,9 @@ class MarkdownPreviewMixin:
             self.markdown_viewer = PreviewViewer(markdown_text)
         self.markdown_viewer.styles.width = "100%"
         self.markdown_viewer.styles.height = "100%"
-        # Match TextArea padding: 1 line vertical, 2 spaces horizontal
+        # Match TextArea padding: 2 lines vertical, 3 spaces horizontal
         self.markdown_viewer.styles.margin = 0
-        self.markdown_viewer.styles.padding = (1, 2)
+        self.markdown_viewer.styles.padding = (2, 3)
         # Mount and then focus the TOC tree for navigation (fall back to viewer)
         self.mount(self.markdown_viewer)
         def focus_toc() -> None:
