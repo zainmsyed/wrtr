@@ -13,6 +13,8 @@ from screens.recent_files_screen import RecentFilesScreen  # NEW
 import importlib
 from file_browser import FileBrowser
 from editor import MarkdownEditor
+from interfaces.workspace_service import WorkspaceService
+from interfaces.theme_service import ThemeService
 from workspace import WorkspaceManager
 from theme import ThemeManager
 from clipboard import ClipboardManager
@@ -66,8 +68,9 @@ class wrtr(GlobalKeyHandler, App):
     def __init__(self):
         super().__init__()
         self._root_toggled = False
-        self.workspace_manager = WorkspaceManager()
-        self.theme_manager = ThemeManager()
+        # Initialize core services with clear interface types
+        self.workspace_manager: WorkspaceService = WorkspaceManager()
+        self.theme_manager: ThemeService = ThemeManager()
         # Initialize layout manager
         self.layout_manager = LayoutManager(self)
         logger.info(f"Profiler init complete: {time.time() - _startup_start:.3f}s")
@@ -100,7 +103,7 @@ class wrtr(GlobalKeyHandler, App):
         tree.path = self.DEFAULT_DIR
 
         # Restore saved theme (or stay on Textual default)
-        saved = ThemeManager.load()
+        saved = self.theme_manager.load()
         if saved:
             self.theme = saved
 
@@ -110,7 +113,7 @@ class wrtr(GlobalKeyHandler, App):
 
     def watch_theme(self, new_theme: str) -> None:
         """Called by Textual every time `self.theme` changes."""
-        ThemeManager.save(new_theme)
+        self.theme_manager.save(new_theme)
 
     async def action_show_search(self) -> None:
         """Show the global fuzzy search overlay."""

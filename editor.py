@@ -12,6 +12,7 @@ from status_bar import EditorStatusBar
 from typing import Generator
 from textual.widget import Widget
 from tree_sitter_markdown import language
+from interfaces.spellcheck_service import SpellCheckService
 from spellcheck import MarkdownSpellchecker
 import re
 
@@ -36,8 +37,8 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
         self._debounce_delay: float = 1.0
 
         # Spellchecker will be loaded on first use to speed up startup
-        self.spellchecker = None  # type: MarkdownSpellchecker | None
-        self._spellcheck_active = False  # Track spellcheck mode state
+        self.spellchecker: SpellCheckService | None = None
+        self._spellcheck_active: bool = False
 
     def compose(self) -> Generator[Widget, None, None]:
         """Inner composition: TextArea + StatusBar."""

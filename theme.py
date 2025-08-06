@@ -1,11 +1,11 @@
 """
 Module: Theme Management
 """
-from textual.app import ComposeResult
+from interfaces.theme_service import ThemeService
 import json
 from pathlib import Path
 
-class ThemeManager:
+class ThemeManager(ThemeService):
     """
     Handle application theming using Textual's built-in themes.
     """
@@ -28,16 +28,14 @@ class ThemeManager:
         else:
             raise ValueError(f"Theme '{name}' not available")
 
-    @classmethod
-    def load(cls) -> str | None:
+    def load(self) -> str | None:
         """Return the last saved theme, or None if first run."""
         try:
-            return json.loads(cls.SETTINGS.read_text())["theme"]
+            return json.loads(self.SETTINGS.read_text())["theme"]
         except (FileNotFoundError, KeyError):
             return None
 
-    @classmethod
-    def save(cls, name: str) -> None:
+    def save(self, name: str) -> None:
         """Persist the chosen theme name."""
-        cls.CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-        cls.SETTINGS.write_text(json.dumps({"theme": name}))
+        self.CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        self.SETTINGS.write_text(json.dumps({"theme": name}))
