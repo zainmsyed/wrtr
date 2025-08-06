@@ -5,6 +5,7 @@ from textual.widgets import TextArea
 from markdown_preview import MarkdownPreviewMixin
 from textual.containers import Vertical
 from textual.events import Key
+from logger import logger  # centralized logger
 from pathlib import Path
 from textual.timer import Timer
 from status_bar import EditorStatusBar
@@ -105,13 +106,7 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
 
     async def on_key(self, event: Key) -> None:
         """Handle key events for the editor."""
-        print(f"[DEBUG] MarkdownEditor received key: {event.key}")
-        # Handle Ctrl+T (toggle browser) inside editor
-        if event.key == "ctrl+t" or getattr(event, 'name', None) == "ctrl_t":
-            # Delegate browser toggle to the App
-            self.app.action_toggle_browser()
-            event.stop()
-            return
+        logger.debug(f"MarkdownEditor received key: {event.key}")
         # Exit markdown preview on Escape
         if hasattr(self, 'markdown_viewer') and event.key == "escape":
             self.restore_text_area()

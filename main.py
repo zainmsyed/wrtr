@@ -33,6 +33,7 @@ from global_keys import GlobalKeyHandler
 from recent_manager import RecentManager
 import shutil
 from textual.events import Key
+from logger import logger
 from layout_manager import LayoutManager
 
 
@@ -69,10 +70,10 @@ class wrtr(GlobalKeyHandler, App):
         self.theme_manager = ThemeManager()
         # Initialize layout manager
         self.layout_manager = LayoutManager(self)
-        print(f"[Profiler] init complete: {time.time() - _startup_start:.3f}s")
+        logger.info(f"Profiler init complete: {time.time() - _startup_start:.3f}s")
 
     def compose(self) -> ComposeResult:
-        print(f"[Profiler] compose start: {time.time() - _startup_start:.3f}s")
+        logger.info(f"Profiler compose start: {time.time() - _startup_start:.3f}s")
         yield Header()
         # three-column layout: file browser + two editor panes
         from textual.containers import Horizontal
@@ -428,23 +429,25 @@ class wrtr(GlobalKeyHandler, App):
 
     async def action_toggle_spell_check(self) -> None:
         """Toggle spellcheck mode in the focused editor."""
+        # Determine the focused editor or its parent
         focused = self.focused
-        print(f"[DEBUG] Focused widget: {focused}")
+        logger.debug(f"Focused widget: {focused}")
 
-        # Check if the focused widget is a TextArea and get its parent MarkdownEditor
+        # If focus is inside a TextArea, get its MarkdownEditor parent
         if isinstance(focused, TextArea) and isinstance(focused.parent, MarkdownEditor):
             focused = focused.parent
 
+        # Only proceed if the focused widget is a MarkdownEditor
         if isinstance(focused, MarkdownEditor):
-            print("[DEBUG] Focused widget is a MarkdownEditor.")
+            logger.debug("Focused widget is a MarkdownEditor.")
             if not focused.status_bar.spellcheck_mode:
-                print("[DEBUG] Entering spellcheck mode.")
+                logger.debug("Entering spellcheck mode.")
                 focused.status_bar.enter_spellcheck_mode()
             else:
-                print("[DEBUG] Exiting spellcheck mode.")
+                logger.debug("Exiting spellcheck mode.")
                 focused.status_bar.exit_spellcheck_mode()
         else:
-            print("[DEBUG] Focused widget is not a MarkdownEditor.")
+            logger.debug("Focused widget is not a MarkdownEditor.")
 
     async def action_toggle_markdown_preview(self) -> None:
         """Toggle markdown preview in the focused editor pane."""

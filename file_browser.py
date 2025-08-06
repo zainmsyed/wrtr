@@ -16,6 +16,7 @@ from recent_manager import RecentManager  # add import
 from favorite_manager import get as get_favorites, add, remove
 import tempfile
 import shutil  # add near top imports
+from logger import logger
 
 class FileBrowser(DirectoryTree):
     """Custom file browser widget (list-based)"""
@@ -173,16 +174,16 @@ class FileBrowser(DirectoryTree):
         if path.is_file():
             # TODO: Add a way to detect Shift key or use a different keybind
             target = "editor_a"  # Default to editor_a for now
-            print(f"[DEBUG post_message] opening file {path} in {target}")
+            logger.debug(f"post_message opening file {path} in {target}")
             self.post_message(self.FileOpen(str(path), target))
 
     async def on_node_highlighted(self, event) -> None:
         """Update and log current_path when a tree node is highlighted"""
         try:
             self.current_path = event.node.data
-            print(f"[DEBUG on_node_highlighted] new current_path={self.current_path}")
+            logger.debug(f"on_node_highlighted new current_path={self.current_path}")
         except Exception as e:
-            print(f"[DEBUG on_node_highlighted] error: {e}")
+            logger.debug(f"on_node_highlighted error: {e}")
 
     async def on_key(self, event: Key) -> None:
         """Handle new file (n), delete, rename (r), favorite (f), and file-open keys."""
