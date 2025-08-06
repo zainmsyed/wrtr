@@ -2,8 +2,30 @@
 Module: Markdown preview mixin
 Provides toggleable MarkdownViewer preview functionality.
 """
-from textual.widgets import MarkdownViewer as BaseMarkdownViewer, Tree
+from textual.widgets import Markdown as BaseMarkdownViewer, Tree
 from textual.events import Key
+
+# Preview widget with exit key bindings registered at import time
+class PreviewViewer(BaseMarkdownViewer):
+    """Standalone Markdown viewer with exit-preview key bindings."""
+    # Allow this widget to receive focus and handle key bindings
+    can_focus = True
+    BINDINGS = [
+        ("escape", "exit_preview", "Exit preview"),
+        ("ctrl+w", "exit_preview", "Exit preview"),
+        ("ctrl+shift+m", "exit_preview", "Exit preview"),
+        ("up", "scroll_up", "Scroll up"),
+        ("down", "scroll_down", "Scroll down"),
+        ("left", "scroll_left", "Scroll left"),
+        ("right", "scroll_right", "Scroll right"),
+    ]
+
+    def action_exit_preview(self) -> None:
+        """Action to exit the markdown preview."""
+        if hasattr(self.parent, 'toggle_markdown_preview'):
+            self.parent.toggle_markdown_preview()
+
+
 
 class MarkdownPreviewMixin:
     """Mixin that adds markdown preview toggle to a TextArea-containing widget."""
@@ -13,20 +35,7 @@ class MarkdownPreviewMixin:
         self.text_area.visible = False
         # Collapse TextArea to free layout space
         self.text_area.styles.display = "none"
-        # Use a custom viewer that handles Escape to restore editor
-        class PreviewViewer(BaseMarkdownViewer):  # nested to capture parent
-            def on_key(self, event: Key) -> None:
-                # Treat Escape and Ctrl+W the same: exit preview
-                if (event.key == "escape"
-                        or event.key == "ctrl+w"
-                        or getattr(event, 'name', None) == "ctrl_w"):
-                    if hasattr(self.parent, 'toggle_markdown_preview'):
-                        self.parent.toggle_markdown_preview()
-                        event.stop()
-                    return
-                # Other keys: do nothing and bubble normally
-                return
-        # Enable table of contents if supported
+        # Use the standalone PreviewViewer that handles exit keys
         try:
             self.markdown_viewer = PreviewViewer(markdown_text, toc=True)
         except TypeError:
@@ -34,17 +43,23 @@ class MarkdownPreviewMixin:
             self.markdown_viewer = PreviewViewer(markdown_text)
         self.markdown_viewer.styles.width = "100%"
         self.markdown_viewer.styles.height = "100%"
+        # Match TextArea padding: 1 line vertical, 2 spaces horizontal
         self.markdown_viewer.styles.margin = 0
-        self.markdown_viewer.styles.padding = 0
+        self.markdown_viewer.styles.padding = (1, 2)
+        # Mount and then focus the TOC tree for navigation (fall back to viewer)
         self.mount(self.markdown_viewer)
-        # Schedule TOC focus to next cycle after mount
         def focus_toc() -> None:
             try:
+                # Focus the table of contents tree for scrolling/navigation
                 toc_tree = self.markdown_viewer.query_one(Tree)
                 toc_tree.focus()
             except Exception:
-                self.markdown_viewer.focus()
-        # call_later ensures the tree is mounted before focusing
+                # Fallback to focusing the viewer itself (for exit keys)
+                try:
+                    self.markdown_viewer.focus()
+                except Exception:
+                    pass
+        # Delay focus until after mount cycle
         self.call_later(focus_toc)
 
     def restore_text_area(self) -> None:
@@ -64,3 +79,15 @@ class MarkdownPreviewMixin:
             self.restore_text_area()
         else:
             self.load_markdown_viewer(self.text_area.text)
+
+    def on_key(self, event: Key) -> None:
+        """Catch exit-preview keys even when focus is in the TOC tree."""
+        # Only intercept when preview is active
+        if hasattr(self, 'markdown_viewer'):
+            key = event.key or getattr(event, 'name', None)
+            if key in ('escape', 'ctrl+w', 'ctrl+shift+m'):
+                self.restore_text_area()
+                event.stop()
+                return
+        # Otherwise, allow normal event propagation
+        # ...existing key handlers...

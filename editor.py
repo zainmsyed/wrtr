@@ -20,6 +20,14 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
     Markdown editor widget with syntax highlighting, auto-save,
     and a status bar that does NOT overlap the last line.
     """
+    # Local key binding for toggle preview
+    BINDINGS = [
+        ("ctrl+shift+m", "toggle_preview", "Toggle MD Preview"),
+    ]
+    def action_toggle_preview(self) -> None:
+        """Toggle markdown preview in this editor pane."""
+        self.toggle_markdown_preview()
+
     def __init__(self, id=None):
         super().__init__(id=id)
         self._saved_path: Path | None = None
@@ -51,6 +59,9 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
         self.text_area.text = value
 
     def load_text(self, value: str) -> None:
+        # Close markdown preview if active when loading new content
+        if hasattr(self, 'markdown_viewer'):
+            self.restore_text_area()
         self.text_area.load_text(value)
 
     def set_path(self, path: Path) -> None:

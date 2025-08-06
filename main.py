@@ -295,6 +295,9 @@ class wrtr(GlobalKeyHandler, App):
             editor = self.query_one("#editor_b")
         else:
             editor = self.query_one("#editor_a")
+        # Close markdown preview if active before loading new content
+        if hasattr(editor, 'markdown_viewer'):
+            editor.restore_text_area()
         editor.load_text(content)
         editor.set_path(Path(path))
         editor.focus()
@@ -489,8 +492,8 @@ class wrtr(GlobalKeyHandler, App):
     async def action_toggle_markdown_preview(self) -> None:
         """Toggle markdown preview in the focused editor pane."""
         focused = self.focused
-        # If focus is in TextArea or MarkdownViewer, find its MarkdownEditor parent
-        from textual.widgets import TextArea, MarkdownViewer
+        # If focus is in TextArea or Markdown widget, find its MarkdownEditor parent
+        from textual.widgets import TextArea, Markdown as MarkdownViewer
         editor = None
         if isinstance(focused, TextArea) and hasattr(focused, 'parent') and isinstance(focused.parent, MarkdownEditor):
             editor = focused.parent
