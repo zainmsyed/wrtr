@@ -33,6 +33,7 @@ from global_keys import GlobalKeyHandler
 from recent_manager import RecentManager
 import shutil
 from textual.events import Key
+from layout_manager import LayoutManager
 
 
 class wrtr(GlobalKeyHandler, App):
@@ -66,7 +67,9 @@ class wrtr(GlobalKeyHandler, App):
         self._root_toggled = False
         self.workspace_manager = WorkspaceManager()
         self.theme_manager = ThemeManager()
-    print(f"[Profiler] init complete: {time.time() - _startup_start:.3f}s")
+        # Initialize layout manager
+        self.layout_manager = LayoutManager(self)
+        print(f"[Profiler] init complete: {time.time() - _startup_start:.3f}s")
 
     def compose(self) -> ComposeResult:
         print(f"[Profiler] compose start: {time.time() - _startup_start:.3f}s")
@@ -100,18 +103,9 @@ class wrtr(GlobalKeyHandler, App):
         if saved:
             self.theme = saved
 
-        # Push a new HomeScreen instance to keep the stack valid
+        # Push HomeScreen and initialize layout
         self.push_screen(HomeScreen())
-        # Default to two-pane layout: hide editor_b and size browser/editor_a
-        browser = self.query_one("#file-browser")
-        editor_a = self.query_one("#editor_a")
-        editor_b = self.query_one("#editor_b")
-        editor_b.visible = False
-        browser.styles.width = "25%"
-        editor_a.styles.width = "75%"
-        # ensure editors never collapse entirely on narrow terminals
-        editor_a.styles.min_width = 1
-        editor_b.styles.min_width = 1
+        self.layout_manager.initialize()
 
     def watch_theme(self, new_theme: str) -> None:
         """Called by Textual every time `self.theme` changes."""
@@ -129,29 +123,12 @@ class wrtr(GlobalKeyHandler, App):
 
     def action_new_file(self) -> None:
         """Handle creation of a new file: collapse browser and show a full-width editor."""
-        # Pop HomeScreen (if present) to reveal main layout
+        # Pop HomeScreen then delegate new-file layout
         try:
             self.pop_screen()
         except Exception:
             pass
-        # Get layout widgets
-        browser = self.query_one("#file-browser")
-        editor_a = self.query_one("#editor_a")
-        editor_b = self.query_one("#editor_b")
-        # Collapse file browser
-        browser.visible = False
-        browser.styles.display = "none"
-        browser.styles.width = "0%"
-        # Ensure primary editor is visible and properly reset for new file
-        editor_a.visible = True
-        editor_a.styles.width = "100%"
-        editor_a.clear_status()  # This properly resets the file path and content
-        # Hide secondary editor
-        editor_b.visible = False
-        editor_b.styles.display = "none"
-        editor_b.styles.width = "0%"
-        # Focus the primary editor
-        editor_a.focus()
+        self.layout_manager.new_file()
 
     async def action_delete_item(self) -> None:
         # TODO: delete selected file or folder
@@ -168,37 +145,8 @@ class wrtr(GlobalKeyHandler, App):
 
     def action_toggle_browser(self) -> None:
         """Toggle the visibility of the file browser pane."""
-        # Query the browser and editors
-        browser = self.query_one("#file-browser")
-        editor_a = self.query_one("#editor_a")
-        editor_b = self.query_one("#editor_b")
-        if not browser:
-            return
-        # Toggle visibility
-        browser.visible = not browser.visible
-        if not browser.visible:
-            # Collapse browser entirely
-            browser.styles.display = "none"
-            browser.styles.width = "0%"
-            # Expand editors to fill available space
-            if editor_b.visible:
-                editor_a.styles.width = "50%"
-                editor_b.styles.width = "50%"
-            elif editor_a.visible:
-                editor_a.styles.width = "100%"
-            return
-        # Restore browser display and widths when shown
-        browser.styles.display = "block"
-        if editor_b.visible:
-            browser.styles.width = "25%"
-            editor_a.styles.width = "37.5%"
-            editor_b.styles.width = "37.5%"
-        elif editor_a.visible:
-            browser.styles.width = "25%"
-            editor_a.styles.width = "75%"
-            # Hide second editor when it's unused
-            editor_b.styles.display = "none"
-            editor_b.styles.width = "0%"
+        # Delegate browser toggle layout
+        self.layout_manager.toggle_browser()
 
     def action_toggle_root(self) -> None:
         """Toggle file browser between default wrtr folder and system root."""

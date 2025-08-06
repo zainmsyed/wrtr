@@ -106,6 +106,12 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
     async def on_key(self, event: Key) -> None:
         """Handle key events for the editor."""
         print(f"[DEBUG] MarkdownEditor received key: {event.key}")
+        # Handle Ctrl+T (toggle browser) inside editor
+        if event.key == "ctrl+t" or getattr(event, 'name', None) == "ctrl_t":
+            # Delegate browser toggle to the App
+            self.app.action_toggle_browser()
+            event.stop()
+            return
         # Exit markdown preview on Escape
         if hasattr(self, 'markdown_viewer') and event.key == "escape":
             self.restore_text_area()

@@ -78,3 +78,28 @@ ModalScreen {
     border: solid #444444; /* Use a valid Textual border type */
     padding: 1 1; /* Use integers for padding */
 }
+/* Pane width and visibility utility classes */
+.pane-hidden {
+    display: none;
+    width: 0%;
+}
+
+.pane-full {
+    width: 100%;
+}
+
+.pane-half {
+    width: 50%;
+}
+
+.pane-quarter {
+    width: 25%;
+}
+
+.pane-three-quarter {
+    width: 75%;
+}
+/* Three-eighths width for two-editor layout */
+.pane-three-eighths {
+    width: 37.5%;
+}
