@@ -3,8 +3,9 @@ Module: Workspace Management
 """
 import json
 from pathlib import Path
+from interfaces.workspace_service import WorkspaceService
 
-class WorkspaceManager:
+class WorkspaceManager(WorkspaceService):
     """
     Manage workspace states: open files, editor positions, browser cwd.
     """

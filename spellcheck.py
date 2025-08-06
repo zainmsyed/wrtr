@@ -1,6 +1,7 @@
 import pkg_resources
 from symspellpy import SymSpell, Verbosity
-class SimpleSpellchecker:
+from interfaces.spellcheck_service import SpellCheckService
+class SimpleSpellchecker(SpellCheckService):
     """Basic SymSpell-based spell checker."""
     # Implements SpellCheckService protocol
 
