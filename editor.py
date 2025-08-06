@@ -139,7 +139,7 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
                     editor_a.text = ''
                             # print("Next word:", current_word)
             # Recalculate layout to fix any overflow issues
-            self.app._layout_resize()
+            self.app.layout_manager.layout_resize()
 
             # Focus the remaining editor
                                 # print(f"Replaced '{current_word[0]}' with '{suggestion}'.")

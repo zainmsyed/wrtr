@@ -283,7 +283,8 @@ class FileBrowser(DirectoryTree):
             editor = app.query_one("#editor_b")
             app.query_one("#editor_a").visible = True
             app.query_one("#editor_b").visible = True
-            app._reflow_layout()
+            # Update layout via LayoutManager instead of deprecated method
+            app.layout_manager.layout_resize()
             editor.load_text(content)
             editor.set_path(Path(path_str))
             editor.focus()

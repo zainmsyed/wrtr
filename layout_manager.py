@@ -76,3 +76,21 @@ class LayoutManager:
             # Hide secondary editor pane
             editor_b.styles.display = 'none'
             editor_b.styles.width = '0%'
+    
+    def layout_resize(self) -> None:
+        """Let Textual re-calculate widths cleanly."""
+        browser = self.app.query_one("#file-browser")
+        editor_a = self.app.query_one("#editor_a")
+        editor_b = self.app.query_one("#editor_b")
+
+        # 1: Browser width
+        browser.styles.width = "25%" if browser.visible else "0%"
+        browser.styles.display = "block" if browser.visible else "none"
+
+        # 2: Editors – collapse or expand
+        for e in (editor_a, editor_b):
+            e.styles.display = "block" if e.visible else "none"
+            e.styles.width = (
+                "37.5%" if editor_a.visible and editor_b.visible else
+                ("75%" if browser.visible else "100%")
+            )

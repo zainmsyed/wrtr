@@ -172,58 +172,8 @@ class wrtr(GlobalKeyHandler, App):
         """
         self.query_one("#file-browser").cycle_root()
 
-    def _reflow_layout(self) -> None:
-        """Resize exactly like Ctrl-T does."""
-        browser   = self.query_one("#file-browser")
-        editor_a  = self.query_one("#editor_a")
-        editor_b  = self.query_one("#editor_b")
 
-        # 1. Browser
-        if not browser.visible:
-            browser.styles.display = "none"
-            browser.styles.width   = "0%"
-        else:
-            browser.styles.display = "block"
-            browser.styles.width   = "25%"
 
-        # 2. Hide invisible editors
-        for e in (editor_a, editor_b):
-            if not e.visible:
-                e.styles.display = "none"
-                e.styles.width   = "0%"
-            else:
-                e.styles.display = "block"
-
-        # 3. Split the remaining space
-        if editor_a.visible and editor_b.visible:
-            editor_a.styles.width = editor_b.styles.width = "37.5%"
-        elif editor_a.visible:
-            editor_a.styles.width = "75%" if browser.visible else "100%"
-        elif editor_b.visible:
-            editor_b.styles.width = "75%" if browser.visible else "100%"
-
-    def _collapse_editor(self, editor: MarkdownEditor) -> None:
-        """Truly collapse the editor so the remaining one fills the row."""
-        editor.styles.width  = "0%"
-        editor.styles.display = "none"
-
-    def _layout_resize(self) -> None:
-        """Let Textual re-calculate widths cleanly."""
-        browser = self.query_one("#file-browser")
-        editor_a = self.query_one("#editor_a")
-        editor_b = self.query_one("#editor_b")
-
-        # 1️⃣  Browser width
-        browser.styles.width = "25%" if browser.visible else "0%"
-        browser.styles.display = "block" if browser.visible else "none"
-
-        # 2️⃣  Editors – collapse or expand
-        for e in (editor_a, editor_b):
-            e.styles.display = "block" if e.visible else "none"
-            e.styles.width = (
-                "37.5%" if editor_a.visible and editor_b.visible else
-                ("75%" if browser.visible else "100%")
-            )
 
     async def action_close_pane(self) -> None:
         """Close the focused pane and let the other fill the row."""
@@ -240,9 +190,11 @@ class wrtr(GlobalKeyHandler, App):
             editor_a.clear_status()
 
         editor_a.focus()
-
         # Force repaint to clear any ghost column
         self.app.refresh()
+        # Update layout after closing a pane
+        self.layout_manager.layout_resize()
+
 
     async def on_file_browser_file_open(self, event: FileBrowser.FileOpen) -> None:
         path = event.path
@@ -262,11 +214,10 @@ class wrtr(GlobalKeyHandler, App):
         editor.load_text(content)
         editor.set_path(Path(path))
         editor.focus()
-
-        # 🔑  single layout recalculation
-        self._layout_resize()
-
+        # Single layout recalculation via LayoutManager
+        self.layout_manager.layout_resize()
         RecentManager.add(Path(path))
+
 
     async def action_open_file(self, path) -> None:
         """Open a file at given path in the focused editor."""
@@ -307,8 +258,8 @@ class wrtr(GlobalKeyHandler, App):
         editor_a.load_text(content)
         editor_a.set_path(p)
         editor_a.focus()
-        self._layout_resize()
-
+        # Resize layout after opening file
+        self.layout_manager.layout_resize()
         RecentManager.add(p)
 
     def action_save_file(self) -> None:
@@ -395,7 +346,7 @@ class wrtr(GlobalKeyHandler, App):
             self.query_one("#file-browser").reload()
 
             # Recalculate layout to resize remaining panes
-            self._layout_resize()
+            self.layout_manager.layout_resize()
         except Exception as e:
             self.notify(f"Delete failed: {e}", severity="error")
 
