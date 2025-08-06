@@ -1,4 +1,4 @@
-import pkg_resources
+import importlib.resources
 from symspellpy import SymSpell, Verbosity
 from interfaces.spellcheck_service import SpellCheckService
 class SimpleSpellchecker(SpellCheckService):
@@ -8,12 +8,11 @@ class SimpleSpellchecker(SpellCheckService):
     def __init__(self, max_dictionary_edit_distance: int = 2, prefix_length: int = 7):
         self.symspell = SymSpell(max_dictionary_edit_distance=max_dictionary_edit_distance,
                                  prefix_length=prefix_length)
-        dict_path = pkg_resources.resource_filename("symspellpy",
-                                                    "frequency_dictionary_en_82_765.txt")
-        bigram_path = pkg_resources.resource_filename("symspellpy",
-                                                      "frequency_bigramdictionary_en_243_342.txt")
-        self.symspell.load_dictionary(dict_path, term_index=0, count_index=1)
-        self.symspell.load_bigram_dictionary(bigram_path, term_index=0, count_index=2)
+        # Use importlib.resources to load dictionary paths
+        with importlib.resources.path("symspellpy", "frequency_dictionary_en_82_765.txt") as dict_path:
+            self.symspell.load_dictionary(str(dict_path), term_index=0, count_index=1)
+        with importlib.resources.path("symspellpy", "frequency_bigramdictionary_en_243_342.txt") as bigram_path:
+            self.symspell.load_bigram_dictionary(str(bigram_path), term_index=0, count_index=2)
 
     def correct_word(self, word: str) -> str:
         """Return the top correction for a single word."""

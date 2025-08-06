@@ -80,10 +80,30 @@ async def handle_key_event(editor, event: Key) -> None:
                     exit_spellcheck(editor)
             event.stop()
             return
+        # Ignore current spelling and move to next
         if event.key == "ctrl+i":
-            # Navigate to next misspelled word (ignore current)
             editor.spellchecker.next_word()
             update_spellcheck_display(editor)
+            event.stop()
+            return
+        # Suggestion keybindings: Ctrl+1 ... Ctrl+5
+        if event.key in ("ctrl+1", "ctrl+2", "ctrl+3", "ctrl+4", "ctrl+5"):
+            idx = int(event.key.split('+')[-1]) - 1
+            current = editor.spellchecker.get_current_word()
+            if current and idx < len(current[1]):
+                suggestion = current[1][idx].term
+                # Compute absolute positions of current word
+                word, _, pos = current
+                word_start = pos
+                word_end = pos + len(word)
+                start = editor._convert_text_position_to_cursor(word_start)
+                end = editor._convert_text_position_to_cursor(word_end)
+                # Replace in TextArea and sync buffer
+                editor.view.replace_range(start, end, suggestion)
+                editor.buffer.set_text(editor.text_area.text)
+                # Re-run spellcheck and update display
+                editor.spellchecker.check_text(editor.text)
+                update_spellcheck_display(editor)
             event.stop()
             return
     # No other handlers; let default processing occur

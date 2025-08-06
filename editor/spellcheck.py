@@ -38,15 +38,22 @@ def update_spellcheck_display(editor):
     misspelled = editor.spellchecker.misspelled_words
     if misspelled:
         idx = editor.spellchecker.current_index
-        word, suggestions, pos = (misspelled[idx][0], [s.term for s in misspelled[idx][1]], misspelled[idx][2])
-        editor.status_bar.set_spellcheck_info(word=word, suggestions=suggestions, progress=(idx+1, len(misspelled)))
-        # Move cursor
+        word, suggestions, pos = (
+            misspelled[idx][0],
+            [s.term for s in misspelled[idx][1]],
+            misspelled[idx][2]
+        )
+        editor.status_bar.set_spellcheck_info(
+            word=word,
+            suggestions=suggestions,
+            progress=(idx+1, len(misspelled))
+        )
+        # Move cursor using TextView helper
         row, col = editor._convert_text_position_to_cursor(pos)
-        editor.text_area.cursor_location = (row, col)
-        editor.text_area.scroll_cursor_visible(center=True)
-        editor.text_area.focus()
+        editor.view.move_cursor(row, col, center=True)
+        editor.view.focus()
     else:
-        editor.status_bar.set_spellcheck_info(None, [], (0,0))
+        editor.status_bar.set_spellcheck_info(None, [], (0, 0))
 
 async def activate_and_focus_first_misspelled_word(editor):
     """Activate spellcheck and focus on the first misspelled word."""

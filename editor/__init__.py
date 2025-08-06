@@ -17,6 +17,8 @@ import re
 
 from .autosave import AutoSaveManager
 from .keybindings import handle_key_event
+from .buffer import TextBuffer
+from .view import TextView
 
 
 class MarkdownEditor(MarkdownPreviewMixin, Vertical):
@@ -34,17 +36,22 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
 
     def __init__(self, id=None):
         super().__init__(id=id)
-        self._saved_path: Path | None = None
+        # Saved file path
+        self._saved_path = None
         # Initialize AutoSaveManager
         self.autosave = AutoSaveManager(self)
-
         # Spellchecker will be loaded on first use to speed up startup
-        self.spellchecker: SpellCheckService | None = None
-        self._spellcheck_active: bool = False
+        self.spellchecker = None
+        self._spellcheck_active = False
+        # Initialize text buffer and conversion alias
+        self.buffer = TextBuffer()
+        self._convert_text_position_to_cursor = self.buffer.convert_text_position_to_cursor
 
     def compose(self) -> Generator[Widget, None, None]:
         """Inner composition: TextArea + StatusBar."""
         self.text_area = TextArea(text="", language="markdown")
+        # Setup view helper for cursor movement and replacements
+        self.view = TextView(self.text_area)
         self.text_area.styles.padding = (2, 3)
         self.status_bar = EditorStatusBar()
         yield self.text_area
@@ -52,15 +59,20 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
 
     @property
     def text(self) -> str:
-        return self.text_area.text
+        # Delegate to buffer for authoritative text
+        return self.buffer.get_text()
 
     @text.setter
     def text(self, value: str) -> None:
+        # Update buffer and TextArea
+        self.buffer.set_text(value)
         self.text_area.text = value
 
     def load_text(self, value: str) -> None:
         if hasattr(self, 'markdown_viewer'):
             self.restore_text_area()
+        # Sync buffer and TextArea
+        self.buffer.set_text(value)
         self.text_area.load_text(value)
 
     def set_path(self, path: Path) -> None:
@@ -76,9 +88,15 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
         self.status_bar.refresh_stats()
 
     def on_text_area_changed(self, event) -> None:
+        # Update status bar and schedule autosave
         self.status_bar.refresh_stats()
         self.autosave.schedule()
         self.status_bar.saved = False
+        # Sync buffer content and cursor position
+        self.buffer.set_text(self.text_area.text)
+        row, col = self.text_area.cursor_location
+        self.buffer.cursor_row = row
+        self.buffer.cursor_col = col
 
     async def on_key(self, event: Key) -> None:
         """Delegate key handling to extracted handler."""
@@ -94,19 +112,3 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
             print(f"Notification: {message}")
 
     # ...remaining methods...
-    def _convert_text_position_to_cursor(self, text_pos: int) -> tuple[int, int]:
-        """Convert absolute text index to (row, col) cursor position in the TextArea."""
-        # Split text into lines
-        lines = self.text.split('\n')
-        current_pos = 0
-        for line_num, line in enumerate(lines):
-            line_end = current_pos + len(line)
-            if text_pos <= line_end:
-                col = text_pos - current_pos
-                return (line_num, col)
-            # Account for newline character
-            current_pos = line_end + 1
-        # If position beyond end, place at end of text
-        if lines:
-            return (len(lines) - 1, len(lines[-1]))
-        return (0, 0)
