@@ -3,20 +3,22 @@ Entry point for Terminal Writer Application
 """
 import sys
 import os
+import time
 from textual.app import App, ComposeResult, ScreenStackError  # for handling screen stack errors
 from textual.containers import Horizontal
 from textual.widgets import Header, Footer, Button, DirectoryTree
 from screens.home_screen import HomeScreen
 from screens.recent_files_screen import RecentFilesScreen  # NEW
 
+import importlib
 from file_browser import FileBrowser
 from editor import MarkdownEditor
-from search import GlobalSearchScreen
 from workspace import WorkspaceManager
 from theme import ThemeManager
 from clipboard import ClipboardManager
 from pathlib import Path, PurePath                       # already imported
 
+_startup_start = time.time()
 def get_resource_path(relative_path):
     """Get absolute path to resource, works for dev and for PyInstaller"""
     if hasattr(sys, '_MEIPASS'):
@@ -64,15 +66,20 @@ class wrtr(GlobalKeyHandler, App):
         self._root_toggled = False
         self.workspace_manager = WorkspaceManager()
         self.theme_manager = ThemeManager()
+    print(f"[Profiler] init complete: {time.time() - _startup_start:.3f}s")
 
     def compose(self) -> ComposeResult:
+        print(f"[Profiler] compose start: {time.time() - _startup_start:.3f}s")
         yield Header()
         # three-column layout: file browser + two editor panes
+        from textual.containers import Horizontal
+        # Lazy-load heavy widgets
+        FB = importlib.import_module("file_browser").FileBrowser
+        ME = importlib.import_module("editor").MarkdownEditor
         with Horizontal():
-            # Default file browser rooted in the wrtr workspace folder
-            yield FileBrowser(path=str(self.DEFAULT_DIR), id="file-browser")
-            yield MarkdownEditor(id="editor_a")
-            yield MarkdownEditor(id="editor_b")
+            yield FB(path=str(self.DEFAULT_DIR), id="file-browser")
+            yield ME(id="editor_a")
+            yield ME(id="editor_b")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -112,7 +119,9 @@ class wrtr(GlobalKeyHandler, App):
 
     async def action_show_search(self) -> None:
         """Show the global fuzzy search overlay."""
-        await self.push_screen(GlobalSearchScreen())
+        # Lazy-load search screen
+        GSS = importlib.import_module("search").GlobalSearchScreen
+        await self.push_screen(GSS())
 
     async def action_switch_workspace(self, number: str) -> None:
         # TODO: switch to workspace number

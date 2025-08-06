@@ -34,11 +34,8 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
         self._save_timer: Timer | None = None
         self._debounce_delay: float = 1.0
 
-        # Inject spellchecker
-        self.spellchecker = MarkdownSpellchecker(
-            dictionary_path=str(Path(__file__).parent / "wrtr" / "data" / "dictionary" / "frequency_dictionary_en_82_765.txt"),
-            user_dictionary_path=str(Path(__file__).parent / "wrtr" / "data" / "dictionary" / "user_dictionary.txt")
-        )
+        # Spellchecker will be loaded on first use to speed up startup
+        self.spellchecker = None  # type: MarkdownSpellchecker | None
         self._spellcheck_active = False  # Track spellcheck mode state
 
     def compose(self) -> Generator[Widget, None, None]:
@@ -277,6 +274,12 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
 
     def _start_spellcheck(self):
         """Start spellcheck mode."""
+        # Lazy-load spellchecker on first use
+        if self.spellchecker is None:
+            self.spellchecker = MarkdownSpellchecker(
+                dictionary_path=str(Path(__file__).parent / "wrtr" / "data" / "dictionary" / "frequency_dictionary_en_82_765.txt"),
+                user_dictionary_path=str(Path(__file__).parent / "wrtr" / "data" / "dictionary" / "user_dictionary.txt")
+            )
         self._spellcheck_active = True
     # print("Spellcheck mode activated.")
 
