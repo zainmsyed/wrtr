@@ -34,14 +34,15 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
         """Toggle markdown preview in this editor pane."""
         self.toggle_markdown_preview()
 
-    def __init__(self, id=None):
+    def __init__(self, id=None, spellchecker: SpellCheckService | None = None):
         super().__init__(id=id)
         # Saved file path
         self._saved_path = None
         # Initialize AutoSaveManager
         self.autosave = AutoSaveManager(self)
-        # Spellchecker will be loaded on first use to speed up startup
-        self.spellchecker = None
+        # Dependency-injected spellchecker for testability
+        from services.spellcheck import MarkdownSpellchecker
+        self.spellchecker: SpellCheckService = spellchecker or MarkdownSpellchecker()
         self._spellcheck_active = False
         # Initialize text buffer and conversion alias
         self.buffer = TextBuffer()

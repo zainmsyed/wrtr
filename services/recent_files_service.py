@@ -10,17 +10,29 @@ class RecentFilesService:
 
     @classmethod
     def load(cls) -> List[Path]:
+        """
+        Load the list of recent files from persistent storage.
+
+        Returns:
+            List[Path]: A list of Paths for recent files, empty if none or on error.
+        """
         if not cls.FILE.exists():
             return []
         try:
             with cls.FILE.open("r", encoding="utf-8") as f:
-                return [Path(p) for p in json.load(f)]
+                data = json.load(f)
+            return [Path(p) for p in data]
         except Exception:
             return []
 
     @classmethod
     def add(cls, path: Path) -> None:
-        """Add file to top, trim to MAX, persist atomically."""
+        """
+        Add a file to the recent list, ensuring it appears at the top, and persist.
+
+        Args:
+            path (Path): The file path to add to recents.
+        """
         recents = cls.load()
         try:
             recents.remove(path)
@@ -34,6 +46,15 @@ class RecentFilesService:
 
     @classmethod
     def exists(cls, path: Path) -> bool:
+        """
+        Check if a given path exists on the filesystem.
+
+        Args:
+            path (Path): The path to check.
+
+        Returns:
+            bool: True if the path exists, False otherwise.
+        """
         return path.exists()
 
     @classmethod

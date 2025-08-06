@@ -65,12 +65,12 @@ class wrtr(GlobalKeyHandler, App):
     DEFAULT_DIR = Path(__file__).with_suffix('').parent / "wrtr"
     SEED_DIR = Path(get_resource_path("docs"))
 
-    def __init__(self):
+    def __init__(self, workspace_manager: WorkspaceService | None = None, theme_manager: ThemeService | None = None):
         super().__init__()
         self._root_toggled = False
-        # Initialize core services with clear interface types
-        self.workspace_manager: WorkspaceService = WorkspaceManager()
-        self.theme_manager: ThemeService = ThemeManager()
+        # Dependency injection for core services
+        self.workspace_manager: WorkspaceService = workspace_manager or WorkspaceManager()
+        self.theme_manager: ThemeService = theme_manager or ThemeManager()
         # Initialize layout manager
         self.layout_manager = LayoutManager(self)
         logger.info(f"Profiler init complete: {time.time() - _startup_start:.3f}s")

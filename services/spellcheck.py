@@ -1,5 +1,6 @@
 import importlib.resources
 import re
+from typing import List, Tuple, Optional
 from symspellpy import SymSpell, Verbosity
 from interfaces.spellcheck_service import SpellCheckService
 
@@ -17,14 +18,30 @@ class SimpleSpellchecker(SpellCheckService):
             self.symspell.load_bigram_dictionary(str(bigram_path), term_index=0, count_index=2)
 
     def correct_word(self, word: str) -> str:
-        """Return the top correction for a single word."""
+        """
+        Return the most likely corrected form of a single word.
+
+        Args:
+            word (str): The word to correct.
+
+        Returns:
+            str: The top correction, or the original word if no suggestions.
+        """
         suggestions = self.symspell.lookup(word, Verbosity.TOP,
                                           max_edit_distance=2,
                                           include_unknown=True)
         return suggestions[0].term if suggestions else word
 
     def correct_text(self, text: str) -> str:
-        """Correct all words in a text string."""
+        """
+        Correct every word in the given text string.
+
+        Args:
+            text (str): The text to spell-check.
+
+        Returns:
+            str: A new string with each word corrected.
+        """
         return " ".join(self.correct_word(w) for w in text.split())
 
     def add_to_dictionary(self, word: str) -> None:
@@ -63,8 +80,16 @@ class MarkdownSpellchecker(SimpleSpellchecker):
         self.misspelled_words: list[tuple[str, list, int]] = []
         self.current_index: int = -1
 
-    def check_text(self, text: str) -> list[tuple[str, list, int]]:
-        """Find misspellings in text, record word, suggestions, and position."""
+    def check_text(self, text: str) -> List[Tuple[str, List, int]]:
+        """
+        Analyze text and return details on misspelled words.
+
+        Args:
+            text (str): The markdown text to check.
+
+        Returns:
+            List[Tuple[str, List, int]]: A list of tuples (word, suggestions, position).
+        """
         self.misspelled_words = []
         # Regex to match URLs
         url_pattern = re.compile(r'https?://[^\s]+|www\.[^\s]+')
@@ -121,20 +146,25 @@ class MarkdownSpellchecker(SimpleSpellchecker):
                 except Exception:
                     pass
 
-    def get_current_word(self):
-        """Return current word tuple or None."""
+    def get_current_word(self) -> Optional[Tuple[str, List, int]]:
+        """
+        Get the current misspelled word entry if available.
+
+        Returns:
+            Optional[Tuple[str, List, int]]: The current (word, suggestions, position), or None.
+        """
         if 0 <= self.current_index < len(self.misspelled_words):
             return self.misspelled_words[self.current_index]
         return None
 
-    def next_word(self):
+    def next_word(self) -> Optional[Tuple[str, List, int]]:
         """Advance to next misspelled word and return it."""
         if not self.misspelled_words:
             return None
         self.current_index = (self.current_index + 1) % len(self.misspelled_words)
         return self.get_current_word()
 
-    def previous_word(self):
+    def previous_word(self) -> Optional[Tuple[str, List, int]]:
         """Go to previous misspelled word and return it."""
         if not self.misspelled_words:
             return None
