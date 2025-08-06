@@ -12,7 +12,7 @@ from typing import Generator
 from textual.widget import Widget
 from tree_sitter_markdown import language
 from interfaces.spellcheck_service import SpellCheckService
-from spellcheck import MarkdownSpellchecker
+from services.spellcheck import MarkdownSpellchecker
 import re
 
 from .autosave import AutoSaveManager

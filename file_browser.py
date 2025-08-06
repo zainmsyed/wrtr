@@ -12,7 +12,7 @@ from screens.rename_screen import RenameScreen  # NEW import
 from editor import MarkdownEditor
 from screens.save_as_screen import SaveAsScreen
 from screens.confirm_screen import ConfirmScreen
-from recent_manager import RecentManager  # add import
+from services.recent_files_service import RecentFilesService  # use service for recent files
 from favorite_manager import get as get_favorites, add, remove
 import tempfile
 import shutil  # add near top imports
@@ -276,7 +276,7 @@ class FileBrowser(DirectoryTree):
             editor.load_text(content)
             editor.set_path(Path(path_str))
             editor.focus()
-            RecentManager.add(Path(path_str))
+            RecentFilesService.add(Path(path_str))
             event.stop()
         elif event.key == "ctrl+m":
             # Ctrl+M → always open in editor_b
@@ -288,7 +288,7 @@ class FileBrowser(DirectoryTree):
             editor.load_text(content)
             editor.set_path(Path(path_str))
             editor.focus()
-            RecentManager.add(Path(path_str))
+            RecentFilesService.add(Path(path_str))
             event.stop()
         else:
             return

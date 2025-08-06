@@ -1,6 +1,8 @@
 import importlib.resources
+import re
 from symspellpy import SymSpell, Verbosity
 from interfaces.spellcheck_service import SpellCheckService
+
 class SimpleSpellchecker(SpellCheckService):
     """Basic SymSpell-based spell checker."""
     # Implements SpellCheckService protocol
@@ -33,12 +35,6 @@ class SimpleSpellchecker(SpellCheckService):
         except Exception:
             pass
 
-if __name__ == "__main__":
-    sc = SimpleSpellchecker()
-    print(sc.correct_word("tsting"))      # expect 'testing'
-    print(sc.correct_text("th tsting words"))  # expect 'th testing words'
- 
-import re
 
 class MarkdownSpellchecker(SimpleSpellchecker):
     """Backward-compatible alias for the old MarkdownSpellchecker interface with basic check_text support."""
@@ -106,7 +102,7 @@ class MarkdownSpellchecker(SimpleSpellchecker):
                 self.misspelled_words.append((word, sugg, pos))
         self.current_index = 0 if self.misspelled_words else -1
         return self.misspelled_words
-    
+
     def add_to_dictionary(self, word: str) -> None:
         """Add a word to both SymSpell and the user dictionary file."""
         # add to symspell and in-memory set

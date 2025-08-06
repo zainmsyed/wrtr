@@ -1,7 +1,7 @@
 from pathlib import Path
 from textual.widgets import ListView, ListItem, Label
 from textual.screen import ModalScreen
-from recent_manager import RecentManager
+from services.recent_files_service import RecentFilesService
 from textual.containers import Center, Vertical
 
 class RecentFilesScreen(ModalScreen[Path | None]):
@@ -36,7 +36,7 @@ class RecentFilesScreen(ModalScreen[Path | None]):
         """Build the list of up to MAX recent files."""
         items = []
         # Use get_recent to fetch up to MAX valid paths
-        for p in RecentManager.get_recent():
+        for p in RecentFilesService.get_recent():
             items.append(
                 ListItem(
                     Label(str(p), classes="recent-item"),

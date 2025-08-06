@@ -3,7 +3,7 @@ Module: Spellcheck service for MarkdownEditor
 Encapsulates spellcheck activation, deactivation, and display update.
 """
 from pathlib import Path
-from spellcheck import MarkdownSpellchecker
+from services.spellcheck import MarkdownSpellchecker
 from interfaces.spellcheck_service import SpellCheckService
 
 

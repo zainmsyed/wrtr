@@ -15,7 +15,7 @@ from file_browser import FileBrowser
 from editor import MarkdownEditor
 from interfaces.workspace_service import WorkspaceService
 from interfaces.theme_service import ThemeService
-from workspace import WorkspaceManager
+from services.workspace_service import WorkspaceManager
 from theme import ThemeManager
 from clipboard import ClipboardManager
 from pathlib import Path, PurePath                       # already imported
@@ -32,7 +32,7 @@ def get_resource_path(relative_path):
 from screens.save_as_screen import SaveAsScreen  # NEW
 from textual.widgets import TextArea  # for save shortcut focus handling
 from global_keys import GlobalKeyHandler
-from recent_manager import RecentManager
+from services.recent_files_service import RecentFilesService
 import shutil
 from textual.events import Key
 from logger import logger
@@ -216,7 +216,8 @@ class wrtr(GlobalKeyHandler, App):
         editor.focus()
         # Single layout recalculation via LayoutManager
         self.layout_manager.layout_resize()
-        RecentManager.add(Path(path))
+        # Record recent file
+        RecentFilesService.add(Path(path))
 
 
     async def action_open_file(self, path) -> None:
@@ -245,22 +246,23 @@ class wrtr(GlobalKeyHandler, App):
             content = p.read_text(encoding="utf-8")
         except Exception:
             content = ""
-        
+
         # Show browser and editors
         browser = self.query_one("#file-browser")
         editor_a = self.query_one("#editor_a")
         editor_b = self.query_one("#editor_b")
-        
+
         browser.visible = True
         editor_a.visible = True
-        
+
         # Load file into primary editor
         editor_a.load_text(content)
         editor_a.set_path(p)
         editor_a.focus()
         # Resize layout after opening file
         self.layout_manager.layout_resize()
-        RecentManager.add(p)
+        # Record recent file
+        RecentFilesService.add(p)
 
     def action_save_file(self) -> None:
         """Save the focused editor’s content via Save-As dialog."""
@@ -281,7 +283,7 @@ class wrtr(GlobalKeyHandler, App):
             editor._saved_path.write_text(editor.text)
             editor.status_bar.saved = True
             self.query_one("#file-browser").reload()
-            RecentManager.add(editor._saved_path)
+            RecentFilesService.add(editor._saved_path)
 
     async def _do_save(self, editor: MarkdownEditor) -> None:
         result = await self.switch_screen_wait(
@@ -303,7 +305,7 @@ class wrtr(GlobalKeyHandler, App):
             # self.notify(f"Saved → {result}", severity="information")
             self.query_one("#file-browser").reload()
 
-            RecentManager.add(result)
+            RecentFilesService.add(result)
         except Exception as e:
             self.notify(f"Save failed: {e}", severity="error")
 
@@ -317,7 +319,7 @@ class wrtr(GlobalKeyHandler, App):
         target.write_text(f"# {event.name}\n\n", encoding="utf-8")
         self.notify(f"Created → {target.name}", severity="information")
         self.query_one("#file-browser").reload()
-        RecentManager.add(target)
+        RecentFilesService.add(target)
 
     async def on_file_browser_file_delete(self, event: FileBrowser.FileDelete) -> None:
         """Delete the requested file/folder and reload the tree."""
