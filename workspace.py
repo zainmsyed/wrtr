@@ -10,6 +10,7 @@ class WorkspaceManager:
     """
     def __init__(self, config_dir: Path = None):
         self.config_dir = config_dir or Path.home() / ".terminal_writer"
+    # Implements WorkspaceService protocol
         self.config_dir.mkdir(exist_ok=True)
         self.max_workspaces = 4
         self.workspaces = {}

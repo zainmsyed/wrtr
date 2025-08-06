@@ -2,6 +2,7 @@ import pkg_resources
 from symspellpy import SymSpell, Verbosity
 class SimpleSpellchecker:
     """Basic SymSpell-based spell checker."""
+    # Implements SpellCheckService protocol
 
     def __init__(self, max_dictionary_edit_distance: int = 2, prefix_length: int = 7):
         self.symspell = SymSpell(max_dictionary_edit_distance=max_dictionary_edit_distance,
