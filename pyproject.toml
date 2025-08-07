@@ -12,9 +12,12 @@ dependencies = [
     "tree-sitter==0.24.0",
 ]
 
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [dependency-groups]
 dev = [
-    "cx-freeze>=8.3.0",
     "flake8==7.3.0",
     "pytest==8.4.1",
     "textual-dev>=1.7.0",
