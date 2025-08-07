@@ -32,7 +32,7 @@ cd wrtr
 ### Launch the App
 
 ```bash
-uv run main.py
+uv run -m wrtr.main
 ```
 
 ## Documentation

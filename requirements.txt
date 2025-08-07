@@ -1,6 +1,9 @@
-textual[syntax]  # Terminal UI framework with syntax highlighting extras
-tree-sitter==0.24.0  # Parsing library for syntax trees
-rapidfuzz>=3.13.0        # Fuzzy search library
-# Testing and linting
-pytest>=7.0.0            # Test framework
-flake8>=6.0.0            # Linter for code style checks
+rapidfuzz==3.13.0
+requests>=2.32.4
+symspellpy>=6.9.0
+textual[syntax]==4.0.0
+tree-sitter==0.24.0
+# Dev dependencies (optional, uncomment if needed for development)
+# flake8==7.3.0
+# pytest==8.4.1
+# textual-dev>=1.7.0

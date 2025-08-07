@@ -210,7 +210,7 @@ __marimo__/
 # Documents
 documents/
 key_press_logs.txt
-wrtr/  
+/wrtr/  
 implimentations/
 troubles_shooting.md
 =0.38.0
