@@ -57,26 +57,31 @@ class MarkdownSpellchecker(SimpleSpellchecker):
     """Backward-compatible alias for the old MarkdownSpellchecker interface with basic check_text support."""
     def __init__(self, dictionary_path: str = None, user_dictionary_path: str = None,
                  max_dictionary_edit_distance: int = 2, prefix_length: int = 7):
-        # ignore provided paths in this simple implementation
+        from pathlib import Path
         super().__init__(max_dictionary_edit_distance=max_dictionary_edit_distance,
                          prefix_length=prefix_length)
         self.user_terms: set[str] = set()
-        # store user dictionary file path
-        self.user_dictionary_path = user_dictionary_path
-        # Load user dictionary if provided
+        # Determine user dictionary path: use provided or default project file
         if user_dictionary_path:
-            try:
-                with open(user_dictionary_path, 'r', encoding='utf-8') as uf:
-                    for line in uf:
-                        parts = line.strip().split()
-                        if not parts:
-                            continue
-                        term = parts[0].lower()
-                        self.user_terms.add(term)
-                        # Also add to symspell dictionary
-                        self.symspell.create_dictionary_entry(term, 1)
-            except Exception:
-                pass
+            self.user_dictionary_path = user_dictionary_path
+        else:
+            base = Path(__file__).parent.parent
+            self.user_dictionary_path = str(
+                base / "wrtr" / "data" / "dictionary" / "user_dictionary.txt"
+            )
+        # Load initial user dictionary terms
+        try:
+            with open(self.user_dictionary_path, 'r', encoding='utf-8') as uf:
+                for line in uf:
+                    parts = line.strip().split()
+                    if not parts:
+                        continue
+                    term = parts[0].lower()
+                    self.user_terms.add(term)
+                    # Also add to symspell dictionary to prevent flagging
+                    self.symspell.create_dictionary_entry(term, 1)
+        except Exception:
+            pass
         self.misspelled_words: list[tuple[str, list, int]] = []
         self.current_index: int = -1
 
@@ -90,6 +95,21 @@ class MarkdownSpellchecker(SimpleSpellchecker):
         Returns:
             List[Tuple[str, List, int]]: A list of tuples (word, suggestions, position).
         """
+        # Reload user dictionary terms each pass to ensure skips are up-to-date
+        if getattr(self, 'user_dictionary_path', None):
+            try:
+                terms = set()
+                with open(self.user_dictionary_path, 'r', encoding='utf-8') as uf:
+                    for line in uf:
+                        parts = line.strip().split()
+                        if parts:
+                            terms.add(parts[0].lower())
+                # Update user_terms and symspell entries
+                self.user_terms = terms
+                for term in self.user_terms:
+                    self.symspell.create_dictionary_entry(term, 1)
+            except Exception:
+                pass
         self.misspelled_words = []
         # Regex to match URLs
         url_pattern = re.compile(r'https?://[^\s]+|www\.[^\s]+')

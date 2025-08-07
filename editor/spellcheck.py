@@ -11,7 +11,7 @@ def start_spellcheck(editor):
     """Start spellcheck mode in the editor."""
     # Lazy-load spellchecker on first use
     if editor.spellchecker is None:
-        # Adjust dictionary paths as needed
+        # Lazy-load spellchecker on first use, with project dictionary paths
         base = Path(__file__).parent.parent
         dict_path = base / "wrtr" / "data" / "dictionary" / "frequency_dictionary_en_82_765.txt"
         user_dict = base / "wrtr" / "data" / "dictionary" / "user_dictionary.txt"
