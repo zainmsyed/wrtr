@@ -115,7 +115,11 @@ class GlobalSearchScreen(PaletteDismissModal[None]):
         """Scan the workspace for .md files and index their names and content lines."""
         titles: dict[str, Path] = {}
         contents: dict[str, Path] = {}
-        for file in Path.cwd().rglob("*.md"):
+        # Only scan markdown files in the Terminal Writer data directory (wrtr/)
+        data_dir = Path.cwd() / "wrtr"
+        if not data_dir.exists():
+            return {}, {}
+        for file in data_dir.rglob("*.md"):
             name = file.name
             titles[name] = file
             try:
