@@ -118,7 +118,6 @@ class wrtr(GlobalKeyHandler, App):
         # Lazy-load search screen
         GSS = importlib.import_module("wrtr.search").GlobalSearchScreen
         await self.push_screen(GSS())
-        await self.push_screen(GSS())
 
     async def action_switch_workspace(self, number: str) -> None:
         # TODO: switch to workspace number
