@@ -40,9 +40,9 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
         self._saved_path = None
         # Initialize AutoSaveManager
         self.autosave = AutoSaveManager(self)
+        # Spellchecker will be lazy-loaded when spellcheck is started (F7)
         # Dependency-injected spellchecker for testability
-        from services.spellcheck import MarkdownSpellchecker
-        self.spellchecker: SpellCheckService = spellchecker or MarkdownSpellchecker()
+        self.spellchecker: SpellCheckService | None = spellchecker
         self._spellcheck_active = False
         # Initialize text buffer and conversion alias
         self.buffer = TextBuffer()

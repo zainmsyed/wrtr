@@ -92,7 +92,6 @@ async def handle_key_event(editor, event: Key) -> None:
             current = editor.spellchecker.get_current_word()
             if current and idx < len(current[1]):
                 suggestion = current[1][idx].term
-                # Compute absolute positions of current word
                 word, _, pos = current
                 word_start = pos
                 word_end = pos + len(word)
@@ -101,9 +100,20 @@ async def handle_key_event(editor, event: Key) -> None:
                 # Replace in TextArea and sync buffer
                 editor.view.replace_range(start, end, suggestion)
                 editor.buffer.set_text(editor.text_area.text)
-                # Re-run spellcheck and update display
-                editor.spellchecker.check_text(editor.text)
-                update_spellcheck_display(editor)
+                # Save the current index before rechecking
+                prev_index = editor.spellchecker.current_index
+                # Re-run spellcheck
+                misspelled = editor.spellchecker.check_text(editor.text)
+                if misspelled:
+                    # If there are still misspelled words, move to the next one (or stay at last if at end)
+                    if prev_index < len(misspelled) - 1:
+                        editor.spellchecker.current_index = prev_index
+                    else:
+                        editor.spellchecker.current_index = len(misspelled) - 1
+                    update_spellcheck_display(editor)
+                else:
+                    # No more misspelled words, exit spellcheck
+                    exit_spellcheck(editor)
             event.stop()
             return
     # No other handlers; let default processing occur
