@@ -104,47 +104,52 @@ class MarkdownSpellchecker(SimpleSpellchecker):
                         parts = line.strip().split()
                         if parts:
                             terms.add(parts[0].lower())
-                # Update user_terms and symspell entries
                 self.user_terms = terms
                 for term in self.user_terms:
                     self.symspell.create_dictionary_entry(term, 1)
             except Exception:
                 pass
+
         self.misspelled_words = []
-        # Regex to match URLs
+        # Normalize smart apostrophes to ASCII
+        text = text.replace("’", "'").replace("‘", "'")
+
+        # Regex patterns
         url_pattern = re.compile(r'https?://[^\s]+|www\.[^\s]+')
-        # Regex to match markdown links ([text](url))
         link_pattern = re.compile(r'\[.*?\]\(.*?\)')
-        # Regex to match ordinal numbers (e.g., 1st, 2nd, 3rd, 4th)
         ordinal_pattern = re.compile(r'^\d+(st|nd|rd|th)$')
-        # Identify spans of URLs to skip words within them
+
+        # Identify spans to skip
         url_spans = [(u.start(), u.end()) for u in url_pattern.finditer(text)]
-        # Also skip spans of markdown links
         link_spans = [(l.start(), l.end()) for l in link_pattern.finditer(text)]
         url_spans.extend(link_spans)
-        # Match words including apostrophes to handle contractions correctly
+
+        # Check each word
         for m in re.finditer(r"\b[\w']+\b", text):
             word = m.group()
             pos = m.start()
-            # Skip user-defined terms
-            if word.lower() in getattr(self, 'user_terms', set()):
+            lw = word.lower()
+            # Skip possessives and stray s
+            if lw == "'s" or lw.endswith("'s") or lw == "s":
                 continue
-            # Skip words that are part of a URL or markdown link
+            # Skip user-defined terms
+            if lw in self.user_terms:
+                continue
+            # Skip URLs or links
             if any(start <= pos < end for start, end in url_spans):
                 continue
-            # Skip ordinal numbers (e.g., 1st, 2nd)
-            if ordinal_pattern.match(word):
+            # Skip numbers and ordinals
+            if ordinal_pattern.match(word) or word.isdigit():
                 continue
-            # Skip pure numeric tokens (e.g., 1234)
-            if word.isdigit():
-                continue
-            # Ignore words that start with uppercase (nouns and sentence starts)
+            # Skip capitalized words
             if word and word[0].isupper():
                 continue
-            # Get all suggestions
+
+            # Get suggestions
             sugg = self.symspell.lookup(word, Verbosity.ALL, max_edit_distance=2, include_unknown=True)
-            if sugg and sugg[0].term.lower() != word.lower():
+            if sugg and sugg[0].term.lower() != lw:
                 self.misspelled_words.append((word, sugg, pos))
+
         self.current_index = 0 if self.misspelled_words else -1
         return self.misspelled_words
 
