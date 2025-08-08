@@ -76,10 +76,19 @@ async def handle_key_event(editor, event: Key) -> None:
                 update_spellcheck_display(editor)
             event.stop()
             return
-        # Ignore current spelling and move to next
+        # Ignore current spelling and skip all further occurrences
         if event.key == "ctrl+i":
-            editor.spellchecker.next_word()
-            update_spellcheck_display(editor)
+            # Add current word to ignored terms for this session
+            current = editor.spellchecker.get_current_word()
+            if current:
+                term = current[0].lower()
+                editor.spellchecker.ignored_terms.add(term)
+                misspelled = editor.spellchecker.check_text(editor.text)
+                if misspelled:
+                    editor.spellchecker.current_index = 0
+                    update_spellcheck_display(editor)
+                else:
+                    exit_spellcheck(editor)
             event.stop()
             return
         # Suggestion keybindings: Ctrl+1 ... Ctrl+5

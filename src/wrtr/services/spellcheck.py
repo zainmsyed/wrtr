@@ -114,6 +114,8 @@ class MarkdownSpellchecker(SimpleSpellchecker):
         )
 
         self.user_terms: set[str] = set()
+        # Per-session ignored terms (skip all further occurrences)
+        self.ignored_terms: set[str] = set()
 
         # Resolve user dictionary path (default to CWD/wrtr/data/dictionary)
         if user_dictionary_path:
@@ -200,6 +202,9 @@ class MarkdownSpellchecker(SimpleSpellchecker):
                 continue
             # Skip user-defined terms
             if lw in self.user_terms:
+                continue
+            # Skip ignored words for the session
+            if lw in getattr(self, 'ignored_terms', set()):
                 continue
             # Skip URLs or links
             if any(start <= pos < end for start, end in url_spans):
