@@ -226,9 +226,11 @@ class MarkdownSpellchecker(SimpleSpellchecker):
             # Skip numbers and ordinals
             if ordinal_pattern.match(word) or word.isdigit():
                 continue
-            # Skip capitalized words
+            # Skip capitalized words only if they are correctly spelled
             if word and word[0].isupper():
-                continue
+                sugg = self.symspell.lookup(word.lower(), Verbosity.TOP, max_edit_distance=2, include_unknown=True)
+                if sugg and sugg[0].term.lower() == lw and getattr(sugg[0], 'distance', 0) == 0:
+                    continue
 
             # Get suggestions
             sugg = self.symspell.lookup(word, Verbosity.ALL, max_edit_distance=2, include_unknown=True)
