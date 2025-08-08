@@ -74,9 +74,12 @@ async def handle_key_event(editor, event: Key) -> None:
                 editor.spellchecker.add_to_dictionary(word)
                 editor.spellchecker.ignored_terms.add(word)  # Ignore the word for the session
                 editor._show_notification(f"'{word}' added to dictionary and ignored.")
+                prev_index = editor.spellchecker.current_index  # Save the current index
                 misspelled = editor.spellchecker.check_text(editor.text)
                 if misspelled:
-                    editor.spellchecker.current_index = 0
+                    # Restore the index and advance to the next word
+                    editor.spellchecker.current_index = min(prev_index, len(misspelled) - 1)
+                    editor.spellchecker.next_word()
                     update_spellcheck_display(editor)
                 else:
                     exit_spellcheck(editor)
@@ -89,9 +92,12 @@ async def handle_key_event(editor, event: Key) -> None:
             if current:
                 term = current[0].lower()
                 editor.spellchecker.ignored_terms.add(term)
+                prev_index = editor.spellchecker.current_index  # Save the current index
                 misspelled = editor.spellchecker.check_text(editor.text)
                 if misspelled:
-                    editor.spellchecker.current_index = 0
+                    # Restore the index and advance to the next word
+                    editor.spellchecker.current_index = min(prev_index, len(misspelled) - 1)
+                    editor.spellchecker.next_word()
                     update_spellcheck_display(editor)
                 else:
                     exit_spellcheck(editor)

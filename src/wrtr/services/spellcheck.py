@@ -19,25 +19,26 @@ class SimpleSpellchecker(SpellCheckService):
             max_dictionary_edit_distance=max_dictionary_edit_distance,
             prefix_length=prefix_length,
         )
-        # Load provided dictionaries if given; otherwise, fall back to built-in resources.
+        # Always load built-in frequency dictionary first to guarantee core vocabulary
+        with importlib.resources.path("symspellpy", "frequency_dictionary_en_82_765.txt") as dict_path_res:
+            self.symspell.load_dictionary(str(dict_path_res), term_index=0, count_index=1)
+
+        # Optionally merge a user-provided dictionary (useful for overrides/extensions)
         if dictionary_path:
             try:
                 self.symspell.load_dictionary(str(dictionary_path), term_index=0, count_index=1)
             except Exception:
-                # Fallback to built-in if custom load fails
-                with importlib.resources.path("symspellpy", "frequency_dictionary_en_82_765.txt") as dict_path_res:
-                    self.symspell.load_dictionary(str(dict_path_res), term_index=0, count_index=1)
-        else:
-            with importlib.resources.path("symspellpy", "frequency_dictionary_en_82_765.txt") as dict_path_res:
-                self.symspell.load_dictionary(str(dict_path_res), term_index=0, count_index=1)
+                # Ignore custom path errors; base dictionary already loaded
+                pass
 
         # Bigram is optional; load provided or built-in if available
         try:
+            # Load built-in bigram first
+            with importlib.resources.path("symspellpy", "frequency_bigramdictionary_en_243_342.txt") as bigram_path_res:
+                self.symspell.load_bigram_dictionary(str(bigram_path_res), term_index=0, count_index=2)
+            # Then optionally merge user-provided bigram
             if bigram_dictionary_path:
                 self.symspell.load_bigram_dictionary(str(bigram_dictionary_path), term_index=0, count_index=2)
-            else:
-                with importlib.resources.path("symspellpy", "frequency_bigramdictionary_en_243_342.txt") as bigram_path_res:
-                    self.symspell.load_bigram_dictionary(str(bigram_path_res), term_index=0, count_index=2)
         except Exception:
             # If bigram loading fails, continue without it
             pass
@@ -200,6 +201,19 @@ class MarkdownSpellchecker(SimpleSpellchecker):
             # Skip possessives and stray s
             if lw == "'s" or lw.endswith("'s") or lw == "s":
                 continue
+            # If word has leading/trailing apostrophes (e.g., 'the or the'),
+            # consider the base word without surrounding apostrophes; if that
+            # base is correctly spelled, skip flagging to avoid false positives
+            # from quotes.
+            if (lw.startswith("'") or lw.endswith("'")) and len(lw) > 1:
+                base = lw.strip("'")
+                if base:
+                    try:
+                        base_sugg = self.symspell.lookup(base, Verbosity.TOP, max_edit_distance=2, include_unknown=True)
+                        if base_sugg and base_sugg[0].term.lower() == base and getattr(base_sugg[0], 'distance', 0) == 0:
+                            continue
+                    except Exception:
+                        pass
             # Skip user-defined terms
             if lw in self.user_terms:
                 continue
