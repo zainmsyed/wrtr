@@ -70,10 +70,16 @@ async def handle_key_event(editor, event: Key) -> None:
         if event.key in ("ctrl+a", getattr(event, 'name', None) == "ctrl_a"):
             current = editor.spellchecker.get_current_word()
             if current:
-                editor.spellchecker.add_to_dictionary(current[0])
-                editor._show_notification(f"'{current[0]}' added to dictionary.")
-                editor.spellchecker.next_word()  # Move to the next word
-                update_spellcheck_display(editor)
+                word = current[0].lower()
+                editor.spellchecker.add_to_dictionary(word)
+                editor.spellchecker.ignored_terms.add(word)  # Ignore the word for the session
+                editor._show_notification(f"'{word}' added to dictionary and ignored.")
+                misspelled = editor.spellchecker.check_text(editor.text)
+                if misspelled:
+                    editor.spellchecker.current_index = 0
+                    update_spellcheck_display(editor)
+                else:
+                    exit_spellcheck(editor)
             event.stop()
             return
         # Ignore current spelling and skip all further occurrences
