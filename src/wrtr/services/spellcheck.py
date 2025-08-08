@@ -8,14 +8,39 @@ class SimpleSpellchecker(SpellCheckService):
     """Basic SymSpell-based spell checker."""
     # Implements SpellCheckService protocol
 
-    def __init__(self, max_dictionary_edit_distance: int = 2, prefix_length: int = 7):
-        self.symspell = SymSpell(max_dictionary_edit_distance=max_dictionary_edit_distance,
-                                 prefix_length=prefix_length)
-        # Use importlib.resources to load dictionary paths
-        with importlib.resources.path("symspellpy", "frequency_dictionary_en_82_765.txt") as dict_path:
-            self.symspell.load_dictionary(str(dict_path), term_index=0, count_index=1)
-        with importlib.resources.path("symspellpy", "frequency_bigramdictionary_en_243_342.txt") as bigram_path:
-            self.symspell.load_bigram_dictionary(str(bigram_path), term_index=0, count_index=2)
+    def __init__(
+        self,
+        max_dictionary_edit_distance: int = 2,
+        prefix_length: int = 7,
+        dictionary_path: str | None = None,
+        bigram_dictionary_path: str | None = None,
+    ):
+        self.symspell = SymSpell(
+            max_dictionary_edit_distance=max_dictionary_edit_distance,
+            prefix_length=prefix_length,
+        )
+        # Load provided dictionaries if given; otherwise, fall back to built-in resources.
+        if dictionary_path:
+            try:
+                self.symspell.load_dictionary(str(dictionary_path), term_index=0, count_index=1)
+            except Exception:
+                # Fallback to built-in if custom load fails
+                with importlib.resources.path("symspellpy", "frequency_dictionary_en_82_765.txt") as dict_path_res:
+                    self.symspell.load_dictionary(str(dict_path_res), term_index=0, count_index=1)
+        else:
+            with importlib.resources.path("symspellpy", "frequency_dictionary_en_82_765.txt") as dict_path_res:
+                self.symspell.load_dictionary(str(dict_path_res), term_index=0, count_index=1)
+
+        # Bigram is optional; load provided or built-in if available
+        try:
+            if bigram_dictionary_path:
+                self.symspell.load_bigram_dictionary(str(bigram_dictionary_path), term_index=0, count_index=2)
+            else:
+                with importlib.resources.path("symspellpy", "frequency_bigramdictionary_en_243_342.txt") as bigram_path_res:
+                    self.symspell.load_bigram_dictionary(str(bigram_path_res), term_index=0, count_index=2)
+        except Exception:
+            # If bigram loading fails, continue without it
+            pass
 
     def correct_word(self, word: str) -> str:
         """
@@ -55,20 +80,58 @@ class SimpleSpellchecker(SpellCheckService):
 
 class MarkdownSpellchecker(SimpleSpellchecker):
     """Backward-compatible alias for the old MarkdownSpellchecker interface with basic check_text support."""
-    def __init__(self, dictionary_path: str = None, user_dictionary_path: str = None,
-                 max_dictionary_edit_distance: int = 2, prefix_length: int = 7):
+    def __init__(
+        self,
+        dictionary_path: str | None = None,
+        user_dictionary_path: str | None = None,
+        max_dictionary_edit_distance: int = 2,
+        prefix_length: int = 7,
+    ):
         from pathlib import Path
-        super().__init__(max_dictionary_edit_distance=max_dictionary_edit_distance,
-                         prefix_length=prefix_length)
+
+        # If a target dictionary file is specified but missing, try to seed it from symspell resources
+        if dictionary_path:
+            try:
+                dp = Path(dictionary_path)
+                if not dp.exists():
+                    dp.parent.mkdir(parents=True, exist_ok=True)
+                    import importlib.resources as ir
+                    with ir.path("symspellpy", "frequency_dictionary_en_82_765.txt") as src:
+                        # Best-effort copy; ignore failure
+                        try:
+                            import shutil as _sh
+                            _sh.copy(src, dp)
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
+        # Initialize SymSpell with either provided or built-in dictionaries
+        super().__init__(
+            max_dictionary_edit_distance=max_dictionary_edit_distance,
+            prefix_length=prefix_length,
+            dictionary_path=dictionary_path,
+        )
+
         self.user_terms: set[str] = set()
-        # Determine user dictionary path: use provided or default project file
+
+        # Resolve user dictionary path (default to CWD/wrtr/data/dictionary)
         if user_dictionary_path:
             self.user_dictionary_path = user_dictionary_path
         else:
-            base = Path(__file__).parent.parent
             self.user_dictionary_path = str(
-                base / "wrtr" / "data" / "dictionary" / "user_dictionary.txt"
+                Path.cwd() / "wrtr" / "data" / "dictionary" / "user_dictionary.txt"
             )
+
+        # Ensure directory exists and file is present
+        try:
+            udp = Path(self.user_dictionary_path)
+            udp.parent.mkdir(parents=True, exist_ok=True)
+            if not udp.exists():
+                udp.write_text("", encoding="utf-8")
+        except Exception:
+            pass
+
         # Load initial user dictionary terms
         try:
             with open(self.user_dictionary_path, 'r', encoding='utf-8') as uf:
@@ -79,7 +142,10 @@ class MarkdownSpellchecker(SimpleSpellchecker):
                     term = parts[0].lower()
                     self.user_terms.add(term)
                     # Also add to symspell dictionary to prevent flagging
-                    self.symspell.create_dictionary_entry(term, 1)
+                    try:
+                        self.symspell.create_dictionary_entry(term, 1)
+                    except Exception:
+                        pass
         except Exception:
             pass
         self.misspelled_words: list[tuple[str, list, int]] = []

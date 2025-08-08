@@ -91,6 +91,33 @@ class wrtr(GlobalKeyHandler, App):
         # 1st-run folder creation
         self.DEFAULT_DIR.mkdir(exist_ok=True)
 
+        # Ensure data/dictionary structure and seed dictionaries
+        try:
+            dict_dir = self.DEFAULT_DIR / "data" / "dictionary"
+            dict_dir.mkdir(parents=True, exist_ok=True)
+
+            # Seed frequency dictionary: prefer local copy in repo if present, else use symspellpy resource
+            freq_target = dict_dir / "frequency_dictionary_en_82_765.txt"
+            if not freq_target.exists():
+                repo_freq = Path.cwd() / "wrtr" / "data" / "dictionary" / "frequency_dictionary_en_82_765.txt"
+                if repo_freq.exists():
+                    shutil.copy(repo_freq, freq_target)
+                else:
+                    import importlib.resources as ir
+                    try:
+                        with ir.path("symspellpy", "frequency_dictionary_en_82_765.txt") as src:
+                            shutil.copy(src, freq_target)
+                    except Exception:
+                        pass
+
+            # Ensure user dictionary exists
+            user_dict = dict_dir / "user_dictionary.txt"
+            if not user_dict.exists():
+                user_dict.write_text("", encoding="utf-8")
+        except Exception:
+            # Non-fatal: app can still run without seeded dictionaries
+            pass
+
         # Copy seed documents if they exist
         if self.SEED_DIR.exists():
             for md_file in self.SEED_DIR.glob("*.md"):
