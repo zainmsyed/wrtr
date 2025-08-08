@@ -72,12 +72,8 @@ async def handle_key_event(editor, event: Key) -> None:
             if current:
                 editor.spellchecker.add_to_dictionary(current[0])
                 editor._show_notification(f"'{current[0]}' added to dictionary.")
-                misspelled = editor.spellchecker.check_text(editor.text)
-                if misspelled:
-                    editor.spellchecker.current_index = 0
-                    update_spellcheck_display(editor)
-                else:
-                    exit_spellcheck(editor)
+                editor.spellchecker.next_word()  # Move to the next word
+                update_spellcheck_display(editor)
             event.stop()
             return
         # Ignore current spelling and move to next
