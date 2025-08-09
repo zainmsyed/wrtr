@@ -17,20 +17,6 @@
     height: 1fr;
 }
 
-#footer {
-    position: absolute;
-    dock: bottom; /* Dock the footer to the bottom */
-    height: 4;
-    width: 100%;
-}
-
-#bottom_bar {
-    position: absolute;
-    dock: bottom; /* Dock the bottom bar to the bottom */
-    height: 4;
-    width: 100%;
-}
-
 .hidden {
     display: none;
 }

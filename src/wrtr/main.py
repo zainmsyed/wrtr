@@ -75,7 +75,6 @@ class wrtr(GlobalKeyHandler, App):
         self.layout_manager = LayoutManager(self)
 
     def compose(self) -> ComposeResult:
-        yield Header()
         # three-column layout: file browser + two editor panes
         from textual.containers import Horizontal
         # Lazy-load heavy widgets
@@ -85,7 +84,6 @@ class wrtr(GlobalKeyHandler, App):
             yield FB(path=str(self.DEFAULT_DIR), id="file-browser")
             yield ME(id="editor_a")
             yield ME(id="editor_b")
-        yield Footer()
 
     def on_mount(self) -> None:
         # 1st-run folder creation

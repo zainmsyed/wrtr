@@ -10,6 +10,7 @@ Here’s a quick reference for Wrtr’s key bindings to keep you productive:
 - **Ctrl+T**: Toggle file browser visibility
 - **Ctrl+O**: Toggle file browser root (wrtr folder ↔ system root)
 - **Ctrl+F7**: Toggle spell-check mode
+- **Ctrl+P**: Open the command palette
 - **Tab**: Cycle focus between panes
 - **Escape**: Back to Home screen or close modals/pop-ups
 - **Delete**: Delete the selected file or folder
