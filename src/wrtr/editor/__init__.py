@@ -1,7 +1,7 @@
 """
 Module: Editor Package
 """
-from textual.widgets import TextArea
+from textual.widgets import TextArea, Input
 from wrtr.markdown_preview import MarkdownPreviewMixin
 from textual.containers import Vertical
 from textual.events import Key
@@ -13,7 +13,7 @@ from textual.widget import Widget
 from tree_sitter_markdown import language
 from wrtr.interfaces.spellcheck_service import SpellCheckService
 from wrtr.services.spellcheck import MarkdownSpellchecker
-import re
+from .editor_search import SearchService
 
 from .autosave import AutoSaveManager
 from .keybindings import handle_key_event
@@ -47,6 +47,8 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
         # Initialize text buffer and conversion alias
         self.buffer = TextBuffer()
         self._convert_text_position_to_cursor = self.buffer.convert_text_position_to_cursor
+        # Initialize search service and floating input widget
+        self.searcher = SearchService(self)
 
     def compose(self) -> Generator[Widget, None, None]:
         """Inner composition: TextArea + StatusBar."""
@@ -54,9 +56,16 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
         # Setup view helper for cursor movement and replacements
         self.view = TextView(self.text_area)
         self.text_area.styles.padding = (2, 3)
+        self.text_area.styles.width = "100%"  # Ensure full width
+        self.text_area.styles.height = "100%"  # Ensure full height
         self.status_bar = EditorStatusBar()
         yield self.text_area
         yield self.status_bar
+    
+    async def on_mount(self) -> None:
+        """Mount floating widgets after editor is attached to DOM asynchronously."""
+        # Mount the search input now that the editor is mounted
+        await self.mount(self.searcher.input)
 
     @property
     def text(self) -> str:
@@ -100,8 +109,83 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
         self.buffer.cursor_col = col
 
     async def on_key(self, event: Key) -> None:
-        """Delegate key handling to extracted handler."""
+        """Handle key events: delegate to editor search or default bindings."""
+        # Activate search on Ctrl+F
+        if event.key == "ctrl+f":
+            # start search mode
+            self._search_active = True
+            self.searcher.activate()
+            event.stop()
+            return
+        # If search mode active, handle search nav and exit
+        if getattr(self, '_search_active', False):
+            # Enter: perform search and move to first result
+            if event.key == "enter":
+                self.searcher.query = self.searcher.input.value.strip()
+                self.searcher.find_matches()
+                if not self.searcher.positions:
+                    self._show_notification(f"No matches for '{self.searcher.query}'")
+                else:
+                    self.searcher.current_index = 0
+                    self.searcher.move_to_current()
+                # Keep input visible for navigation
+                self.text_area.focus()
+                event.stop()
+                return
+            # F3: next match
+            if event.key == "f3":
+                self.searcher.next()
+                # refocus text for cursor visibility
+                self.text_area.focus()
+                event.stop()
+                return
+            # Shift+F3: previous match
+            if event.key == "shift+f3":
+                self.searcher.previous()
+                # refocus text for cursor visibility
+                self.text_area.focus()
+                event.stop()
+                return
+            # Escape: exit search mode
+            if event.key == "escape":
+                self._search_active = False
+                self.searcher.deactivate()
+                event.stop()
+                return
+        # Default handler
         await handle_key_event(self, event)
+
+    async def on_input_changed(self, message: Input.Changed) -> None:
+        """Update search as query changes and move to current match."""
+        # Only handle our search service's input
+        if message.input is not self.searcher.input:
+            return
+        # Update query and find matches
+        self.searcher.query = message.value.strip()
+        self.searcher.find_matches()
+        self.searcher.move_to_current()
+    
+    async def on_input_submitted(self, message: Input.Submitted) -> None:
+        """Trigger search when user presses Enter in search input."""
+        if message.input is not self.searcher.input:
+            return
+        # Finalize query and jump to first match
+        self.searcher.query = message.value.strip()
+        self.searcher.find_matches()
+        if not self.searcher.positions:
+            # No matches: notify user and keep input open
+            self._show_notification(f"No matches for '{self.searcher.query}'")
+            return
+        # Move to first match
+        self.searcher.current_index = 0
+        self.searcher.move_to_current()
+        # Provide match count feedback
+        total = len(self.searcher.positions)
+        self._show_notification(
+            f"Found {total} match{'es' if total != 1 else ''} for '{self.searcher.query}'"
+        )
+        # Return focus to text area so the cursor is visible and navigation works
+        self.text_area.focus()
 
     # ...existing spellcheck methods unchanged...
     
