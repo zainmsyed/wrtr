@@ -58,7 +58,7 @@ class SearchService:
                 words = set(re.findall(r"\w+", text))
                 matches = process.extract(self.query, list(words), scorer=fuzz.WRatio, limit=3)
                 for word, score, _ in matches:
-                    if score < 60:
+                    if score < 80:  # Increase threshold to avoid irrelevant matches
                         continue
                     w_low = word.lower()
                     s2 = 0
