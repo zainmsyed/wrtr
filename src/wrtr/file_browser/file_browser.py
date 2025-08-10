@@ -27,6 +27,7 @@ class FileBrowser(DirectoryTree):
         super().__init__(path, id=id)
         self.current_path: str = path  # track currently highlighted path
         self._cycle = 0
+        self._cut_target: Path | None = None  # cut buffer for move
         self._roots = [
             Path.cwd() / "wrtr",  # project-root wrtr folder
             None,  # Favorites view
@@ -187,6 +188,38 @@ class FileBrowser(DirectoryTree):
 
     async def on_key(self, event: Key) -> None:
         """Handle new file (n), delete, rename (r), favorite (f), and file-open keys."""
+        # Handle cancel move (Escape) and move (cut/paste with 'm')
+        if event.key == "escape" and getattr(self, '_cut_target', None) is not None:
+            # Cancel cut
+            self._cut_target = None
+            self.app.notify("Move canceled")
+            self.reload()
+            event.stop()
+            return
+
+        if event.key == "m":
+            node = self.cursor_node
+            if not node:
+                return
+            selected = Path(node.data.path)
+            # First press: cut
+            if getattr(self, '_cut_target', None) is None:
+                self._cut_target = selected
+                self.app.notify(f"Cut: {selected.name}")
+            else:
+                # Second press: paste into directory
+                dest = selected if selected.is_dir() else selected.parent
+                try:
+                    shutil.move(str(self._cut_target), str(dest))
+                    self.app.notify(f"Moved {self._cut_target.name} → {dest}")
+                except Exception as e:
+                    self.app.notify(f"Move failed: {e}", severity="error")
+                finally:
+                    self._cut_target = None
+                    self.reload()
+            event.stop()
+            return
+
         # Favorite/unfavorite folders
         if event.key == "f":
             node = self.cursor_node
