@@ -19,6 +19,8 @@ from wrtr.services.workspace_service import WorkspaceManager
 from wrtr.theme import ThemeManager
 from wrtr.clipboard import ClipboardManager
 from pathlib import Path, PurePath                       # already imported
+from wrtr.interfaces.backlink_interface import BacklinkClicked
+from wrtr.screens.references_screen import ReferencesScreen
 
 _startup_start = time.time()
 def get_resource_path(relative_path):
@@ -374,6 +376,10 @@ class wrtr(GlobalKeyHandler, App):
             self.layout_manager.layout_resize()
         except Exception as e:
             self.notify(f"Delete failed: {e}", severity="error")
+
+    async def on_backlink_clicked(self, message: BacklinkClicked) -> None:
+        """Open the ReferencesScreen for a clicked backlink target."""
+        await self.push_screen(ReferencesScreen(message.target))
 
     def show_error_message(self, title: str, message: str) -> None:
         """Display an error message to the user as a toast notification."""

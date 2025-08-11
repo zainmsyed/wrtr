@@ -50,6 +50,17 @@ class TextBuffer:
             last = self._lines[-1]
             return (len(self._lines) - 1, len(last))
         return (0, 0)
+    def rowcol_to_offset(self, row: int, col: int) -> int:
+        """Convert (row, col) to absolute text position."""
+        # Sum lengths of all previous lines (including newline)
+        pos = 0
+        for i, line in enumerate(self._lines):
+            if i < row:
+                pos += len(line) + 1
+            else:
+                pos += min(col, len(line))
+                break
+        return pos
 
     def undo(self) -> None:
         """Undo last text change."""

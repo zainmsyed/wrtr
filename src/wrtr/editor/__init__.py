@@ -19,6 +19,8 @@ from .autosave import AutoSaveManager
 from .keybindings import handle_key_event
 from .buffer import TextBuffer
 from .view import TextView
+from textual.events import MouseDown
+from wrtr.interfaces.backlink_interface import BacklinkClicked
 
 
 class MarkdownEditor(MarkdownPreviewMixin, Vertical):
@@ -74,16 +76,17 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
 
     @text.setter
     def text(self, value: str) -> None:
-        # Update buffer and TextArea
+        # Update buffer and TextArea (with backlink highlighting)
         self.buffer.set_text(value)
-        self.text_area.text = value
+        # Use TextView to load text and highlight backlinks
+        self.view.set_text(value)
 
     def load_text(self, value: str) -> None:
         if hasattr(self, 'markdown_viewer'):
             self.restore_text_area()
-        # Sync buffer and TextArea
+        # Sync buffer and TextArea (with backlink highlighting)
         self.buffer.set_text(value)
-        self.text_area.load_text(value)
+        self.view.set_text(value)
 
     def set_path(self, path: Path) -> None:
         self._saved_path = path
@@ -187,6 +190,26 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
         # Return focus to text area so the cursor is visible and navigation works
         self.text_area.focus()
 
+    async def on_mouse_down(self, event: MouseDown) -> None:
+        """Detect clicks on backlinks and emit BacklinkClicked."""
+        # Do not detect backlinks when another screen is active (e.g., ReferencesScreen)
+        if len(self.app.screen_stack) > 1:
+            return
+        # After default processing, detect any click on backlinks
+        regions = getattr(self.view, 'backlink_regions', None)
+        if not regions:
+            return
+        # Map current cursor position to text offset; ignore invalid area clicks
+        row, col = self.text_area.cursor_location
+        try:
+            offset = self.buffer.rowcol_to_offset(row, col)
+        except Exception:
+            return
+        # Check each backlink region for a hit
+        for start, end, target in regions:
+            if start <= offset < end:
+                self.post_message(BacklinkClicked(self, target))
+                return
     # ...existing spellcheck methods unchanged...
     
     def _show_notification(self, message: str):
