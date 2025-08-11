@@ -9,7 +9,11 @@ from pathlib import Path
 class ReferencesScreen(Screen):
     """Displays all references to a given backlink target."""
 
-    BINDINGS = [("escape", "close", "Close")]
+    BINDINGS = [
+        ("escape", "close", "Close"),
+        ("enter", "select", "Open Reference"),
+        ("ctrl+enter", "select", "Open Reference (Ctrl+Enter)"),
+    ]
 
     def __init__(self, target: str, base_dir: Path | None = None) -> None:
         super().__init__()
@@ -53,14 +57,25 @@ class ReferencesScreen(Screen):
     def action_close(self) -> None:
         self.app.pop_screen()
 
+    async def action_select(self) -> None:
+        """Open the currently highlighted reference."""
+        idx = self.list_view.index
+        path, line_no, _ = self.references[idx]
+        # Suppress click echo in editor
+        setattr(self.app, '_suppress_backlink_clicks', True)
+        # Close this screen and open file
+        self.app.pop_screen()
+        await self.app.action_open_file(str(path))
+
     async def on_key(self, event: Key) -> None:
-        """Intercept Escape to close ReferencesScreen without navigating home."""
+        """Handle Escape to close, and Enter/Ctrl+Enter to select reference."""
         if event.key == "escape":
             self.app.pop_screen()
             event.stop()
-
-    async def on_key(self, event: Key) -> None:
-        # Intercept Escape to only pop this ReferencesScreen
-        if event.key == "escape":
+        elif event.key in ("enter", "ctrl+enter"):  # support keyboard navigation
+            idx = self.list_view.index
+            path, line_no, _ = self.references[idx]
+            setattr(self.app, '_suppress_backlink_clicks', True)
             self.app.pop_screen()
+            await self.app.action_open_file(str(path))
             event.stop()

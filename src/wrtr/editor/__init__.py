@@ -155,6 +155,19 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
                 self.searcher.deactivate()
                 event.stop()
                 return
+        # Handle Ctrl+Enter to open backlink references via keyboard
+        if event.key == "ctrl+enter" and hasattr(self.view, 'backlink_regions'):
+            # Map cursor to offset and emit BacklinkClicked if on a link
+            row, col = self.text_area.cursor_location
+            try:
+                offset = self.buffer.rowcol_to_offset(row, col)
+            except Exception:
+                return
+            for start, end, target in self.view.backlink_regions:
+                if start <= offset < end:
+                    self.post_message(BacklinkClicked(self, target))
+                    event.stop()
+                    return
         # Default handler
         await handle_key_event(self, event)
 
