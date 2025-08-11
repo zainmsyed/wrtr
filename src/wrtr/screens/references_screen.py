@@ -2,6 +2,7 @@ from textual.screen import Screen
 from textual.widgets import ListView, ListItem, Label
 from textual.containers import Vertical
 from pathlib import Path
+from textual.events import Key
 from wrtr.interfaces.backlink_interface import BacklinkClicked
 from pathlib import Path
 
@@ -51,3 +52,15 @@ class ReferencesScreen(Screen):
 
     def action_close(self) -> None:
         self.app.pop_screen()
+
+    async def on_key(self, event: Key) -> None:
+        """Intercept Escape to close ReferencesScreen without navigating home."""
+        if event.key == "escape":
+            self.app.pop_screen()
+            event.stop()
+
+    async def on_key(self, event: Key) -> None:
+        # Intercept Escape to only pop this ReferencesScreen
+        if event.key == "escape":
+            self.app.pop_screen()
+            event.stop()
