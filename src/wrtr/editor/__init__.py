@@ -54,7 +54,8 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
 
     def compose(self) -> Generator[Widget, None, None]:
         """Inner composition: TextArea + StatusBar."""
-        self.text_area = TextArea(text="", language="markdown")
+        from .text_area_factory import make_markdown_text_area
+        self.text_area = make_markdown_text_area(initial_text="", language="markdown")
         # Setup view helper for cursor movement and replacements
         self.view = TextView(self.text_area)
         self.text_area.styles.padding = (2, 3)
@@ -110,6 +111,11 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
         row, col = self.text_area.cursor_location
         self.buffer.cursor_row = row
         self.buffer.cursor_col = col
+        # Recompute backlink highlights so color overlays follow edits
+        try:
+            self.view.highlight_backlinks()
+        except Exception:
+            pass
 
     async def on_key(self, event: Key) -> None:
         """Handle key events: delegate to editor search or default bindings."""

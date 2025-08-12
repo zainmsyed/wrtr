@@ -33,26 +33,48 @@ class TextView:
         self.text_area.replace(start=start, end=end, insert=insert)
 
     def highlight_backlinks(self) -> None:
-        """Highlight all [[target]] backlinks as link style."""
+        """Overlay blue highlights for any [[target]] and store regions.
+
+        Uses TextArea's internal _highlights to add custom per-line ranges with
+        the name 'wikilink'. The active theme maps 'wikilink' to blue.
+        """
         import re
-        # Prepare storage for clickable regions
-        self.backlink_regions: list[tuple[int,int,str]] = []
-        text = self.text_area.text
-        # regex to match [[target]]
+        ta = self.text_area
+        text = ta.text
+        # Track regions for activation
+        self.backlink_regions: list[tuple[int, int, str]] = []
+        # Remove previous custom wikilink highlights
+        try:
+            for line_idx, items in list(getattr(ta, "_highlights", {}).items()):
+                ta._highlights[line_idx] = [h for h in items if len(h) < 3 or h[2] != "wikilink"]
+        except Exception:
+            pass
+        # Add current highlights
+        lines = text.splitlines()
         pattern = re.compile(r"\[\[([^\]]+)\]\]")
         for m in pattern.finditer(text):
             start_off, end_off = m.span()
             target = m.group(1)
-            # convert offsets to (row, col)
-            start_pos = self._offset_to_cursor_pos(text, start_off)
-            end_pos = self._offset_to_cursor_pos(text, end_off)
-            # store region
             self.backlink_regions.append((start_off, end_off, target))
-            # apply link style
-            try:
-                self.text_area.add_highlight(start_pos, end_pos, "link")
-            except Exception:
-                pass
+            (start_row, start_col) = self._offset_to_cursor_pos(text, start_off)
+            (end_row, end_col) = self._offset_to_cursor_pos(text, end_off)
+            if start_row == end_row:
+                try:
+                    ta._highlights[start_row].append((start_col, end_col, "wikilink"))
+                except Exception:
+                    pass
+            else:
+                try:
+                    ta._highlights[start_row].append((start_col, len(lines[start_row]), "wikilink"))
+                    for row in range(start_row + 1, end_row):
+                        ta._highlights[row].append((0, len(lines[row]), "wikilink"))
+                    ta._highlights[end_row].append((0, end_col, "wikilink"))
+                except Exception:
+                    pass
+        try:
+            ta.refresh()
+        except Exception:
+            pass
 
     def _offset_to_cursor_pos(self, text: str, offset: int) -> tuple[int, int]:
         """Convert a character offset in text to (row, col) cursor position."""
