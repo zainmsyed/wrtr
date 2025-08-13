@@ -61,6 +61,8 @@ def make_markdown_text_area(initial_text: str = "", language: str | None = "mark
             "md_heading_3": Style(color="#F92672", bold=True),
             "md_heading_4": Style(color="#F92672"),
             "md_heading_5": Style(color="#F92672"),
+            # Strikethrough styling
+            "md_strikethrough": Style(strike=True, color="#90908a"),
         },
     )
     # Make the theme available and activate it

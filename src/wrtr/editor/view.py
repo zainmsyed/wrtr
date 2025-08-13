@@ -178,7 +178,7 @@ class TextView:
             if not overlaps_code(m.start(), m.end(), code_spans):
                 add_range(m.start(), m.end(), "md_mention")
 
-        # Checkboxes (line start) — highlight marker segment only
+        # Checkboxes (line start) — highlight marker segment and strike through checked items
         for m in checkbox_re.finditer(text):
             if overlaps_code(m.start(), m.end(), code_spans):
                 continue
@@ -186,6 +186,13 @@ class TextView:
             start = m.start()
             end = m.end()
             add_range(start, end, "md_checkbox")
+            # If checked, strike through the rest of the line
+            if m.group(1).lower() == "x":
+                line_start = m.end()
+                line_end = text.find("\n", line_start)
+                if line_end == -1:
+                    line_end = len(text)
+                add_range(line_start, line_end, "md_strikethrough")
 
         # Bold (skip inside code)
         for rx in (bold_ast_re, bold_und_re):
@@ -293,6 +300,13 @@ class TextView:
             if overlaps_code(m.start(), m.end(), code_spans):
                 continue
             add_range(m.start(1), m.end(1), "md_email")
+
+        # Strikethrough: ~~text~~
+        strike_re = re.compile(r"~~([^~\n]+)~~")
+        for m in strike_re.finditer(text):
+            if overlaps_code(m.start(), m.end(), code_spans):
+                continue
+            add_range(m.start(1), m.end(1), "md_strikethrough")
 
     def _offset_to_cursor_pos(self, text: str, offset: int) -> tuple[int, int]:
         """Convert a character offset in text to (row, col) cursor position.
