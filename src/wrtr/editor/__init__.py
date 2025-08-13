@@ -116,6 +116,10 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
             self.view.highlight_backlinks()
         except Exception:
             pass
+        try:
+            self.view.refresh_custom_highlights()
+        except Exception:
+            pass
 
     async def on_key(self, event: Key) -> None:
         """Handle key events: delegate to editor search or default bindings."""

@@ -19,18 +19,46 @@ def make_markdown_text_area(initial_text: str = "", language: str | None = "mark
     # Build a lightweight theme that maps link-ish captures to blue
     # Token names come from the markdown highlight query. We include a few
     # potential variants to be safe across grammar versions.
-    link_blue = Style(color="#66D9EF")  # pleasant blue
+    link_blue_u = Style(color="#66D9EF", underline=True)  # hyperlinks: blue + underline
+    wiki_blue = Style(color="#66D9EF")  # backlinks: blue only, no underline
     wrtr_theme = TextAreaTheme(
         name="wrtr",
         # Only override syntax styles we care about. Other styles fall back to CSS.
         syntax_styles={
             # Standard markdown links
-            "link": link_blue,
+            "link": link_blue_u,
+            # Common variants for link parts across markdown grammars
+            "link_text": link_blue_u,
+            "link_label": link_blue_u,
+            "link_destination": link_blue_u,
+            "autolink": link_blue_u,
+            "uri": link_blue_u,
+            "url": link_blue_u,
             # Potential wiki-link capture names seen in some markdown grammars
-            "wikilink": link_blue,
-            "wiki_link": link_blue,
+            "wikilink": wiki_blue,
+            "wiki_link": wiki_blue,
             # Some grammars capture the inner content separately
-            "wikilink_text": link_blue,
+            "wikilink_text": wiki_blue,
+            # Custom overlays from TextView
+            "md_tag": Style(color="#A6E22E", bold=True),        # green tags
+            "md_mention": Style(color="#AE81FF"),               # purple mentions
+            "md_code": Style(color="#E6DB74"),                  # yellow inline code
+            "md_checkbox": Style(color="#75715E", italic=True), # dim task marker
+            "md_bold": Style(color="#F92672", bold=True),       # pink bold
+            "md_italic": Style(italic=True),                      # italic
+            "md_list_bullet": Style(color="#90908a"),           # grey bullet
+            "md_list_number": Style(color="#90908a"),           # grey number marker
+            # Link overlays for reference/inline
+            "md_link_text": link_blue_u,
+            "md_link_def_url": link_blue_u,
+            "md_link_def_label": Style(color="#90908a", italic=True),
+            # Headings
+            "md_heading_marker": Style(color="#90908a"),
+            "md_heading_1": Style(color="#F92672", bold=True),
+            "md_heading_2": Style(color="#F92672", bold=True),
+            "md_heading_3": Style(color="#F92672", bold=True),
+            "md_heading_4": Style(color="#F92672"),
+            "md_heading_5": Style(color="#F92672"),
         },
     )
     # Make the theme available and activate it
