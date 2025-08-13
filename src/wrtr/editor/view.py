@@ -99,7 +99,7 @@ class TextView:
                     # lists
                     "md_list_bullet", "md_list_number",
                     # links
-                    "md_link_text", "md_link_def_url", "md_link_def_label",
+                    "md_link_text", "md_link_def_url", "md_link_def_label", "md_autolink", "md_email",
                     # headings (present in some versions)
                     "md_heading_marker", "md_heading_1", "md_heading_2", "md_heading_3", "md_heading_4", "md_heading_5",
                 }
@@ -262,6 +262,37 @@ class TextView:
                 content_start = m.start(3)
                 content_end = content_start + content_len
                 add_range(content_start, content_end, f"md_heading_{level}")
+
+        # Autolinks and addresses: angle-bracket links, bare URLs, and emails
+        # 1) Angle-bracket autolinks: <scheme:...>
+        autolink_angle_re = re.compile(r"<([a-z][a-z0-9+.-]*:[^ >]+)>", re.IGNORECASE)
+        for m in autolink_angle_re.finditer(text):
+            if overlaps_code(m.start(), m.end(), code_spans):
+                continue
+            add_range(m.start(1), m.end(1), "md_autolink")
+
+        # 2) Bare URLs (http, https, www.) — trim trailing punctuation .,;:!?)\]} if present
+        bare_url_re = re.compile(
+            r"(?<![\w@])((?:https?://|www\.)[\w\-]+(?:\.[\w\-]+)+(?:/[\w\-\./?%&=+#~:@;,]*)?)",
+            re.IGNORECASE,
+        )
+        trailing_punct = ".,;:!?)\\]}"
+        for m in bare_url_re.finditer(text):
+            if overlaps_code(m.start(), m.end(), code_spans):
+                continue
+            s, e = m.start(1), m.end(1)
+            # Trim trailing punctuation
+            while e > s and text[e - 1] in trailing_punct:
+                e -= 1
+            if e > s:
+                add_range(s, e, "md_autolink")
+
+        # 3) Email addresses
+        email_re = re.compile(r"(?<![/\w])([A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,253}\.[A-Za-z]{2,24})")
+        for m in email_re.finditer(text):
+            if overlaps_code(m.start(), m.end(), code_spans):
+                continue
+            add_range(m.start(1), m.end(1), "md_email")
 
     def _offset_to_cursor_pos(self, text: str, offset: int) -> tuple[int, int]:
         """Convert a character offset in text to (row, col) cursor position.

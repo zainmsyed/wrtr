@@ -48,10 +48,12 @@ def make_markdown_text_area(initial_text: str = "", language: str | None = "mark
             "md_italic": Style(italic=True),                      # italic
             "md_list_bullet": Style(color="#90908a"),           # grey bullet
             "md_list_number": Style(color="#90908a"),           # grey number marker
-            # Link overlays for reference/inline
+            # Link overlays for reference/inline and autolinks
             "md_link_text": link_blue_u,
             "md_link_def_url": link_blue_u,
             "md_link_def_label": Style(color="#90908a", italic=True),
+            "md_autolink": link_blue_u,
+            "md_email": link_blue_u,
             # Headings
             "md_heading_marker": Style(color="#90908a"),
             "md_heading_1": Style(color="#F92672", bold=True),
