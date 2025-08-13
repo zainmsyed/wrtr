@@ -182,17 +182,19 @@ class TextView:
         for m in checkbox_re.finditer(text):
             if overlaps_code(m.start(), m.end(), code_spans):
                 continue
-            # Highlight the "- [ ]" part
+            # Highlight the "- [ ]" or "- [x]" part with appropriate style
             start = m.start()
             end = m.end()
-            add_range(start, end, "md_checkbox")
-            # If checked, strike through the rest of the line
             if m.group(1).lower() == "x":
+                add_range(start, end, "md_checkbox_checked")
+                # Strike through the rest of the line for checked tasks
                 line_start = m.end()
                 line_end = text.find("\n", line_start)
                 if line_end == -1:
                     line_end = len(text)
                 add_range(line_start, line_end, "md_strikethrough")
+            else:
+                add_range(start, end, "md_checkbox")
 
         # Bold (skip inside code)
         for rx in (bold_ast_re, bold_und_re):

@@ -40,11 +40,13 @@ def make_markdown_text_area(initial_text: str = "", language: str | None = "mark
             # Some grammars capture the inner content separately
             "wikilink_text": wiki_blue,
             # Custom overlays from TextView
-            "md_tag": Style(color="#A6E22E", bold=True),        # green tags
+            "md_tag": Style(color="#ADD8E6"),  # blue
             "md_mention": Style(color="#AE81FF"),               # purple mentions
             "md_code": Style(color="#E6DB74"),                  # yellow inline code
-            "md_checkbox": Style(color="#75715E", italic=True), # dim task marker
-            "md_bold": Style(color="#F92672", bold=True),       # pink bold
+            # Task list marker: unchecked colored, checked dim
+            "md_checkbox": Style(color="#AE81FF"), # unchecked task marker (purple)
+            "md_checkbox_checked": Style(color="#75715E"), # checked task marker (grey)
+            "md_bold": Style(color="#FF1493", bold=True),       
             "md_italic": Style(italic=True),                      # italic
             "md_list_bullet": Style(color="#90908a"),           # grey bullet
             "md_list_number": Style(color="#90908a"),           # grey number marker
