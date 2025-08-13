@@ -2,8 +2,9 @@
 Module: Markdown preview mixin
 Provides toggleable MarkdownViewer preview functionality.
 """
-from textual.widgets import Markdown as BaseMarkdownViewer, Tree
-from textual.events import Key
+from textual.widgets import MarkdownViewer as BaseMarkdownViewer, Tree
+from textual.events import Key, Blur, Focus
+from textual.widgets import Markdown as InnerMarkdown  # import inner markdown widget class
 
 # Preview widget with exit key bindings registered at import time
 class PreviewViewer(BaseMarkdownViewer):
@@ -11,6 +12,7 @@ class PreviewViewer(BaseMarkdownViewer):
     # Allow this widget to receive focus and handle key bindings
     can_focus = True
     BINDINGS = [
+        ("t", "toggle_toc", "Toggle table of contents"),
         ("escape", "exit_preview", "Exit preview"),
         ("ctrl+w", "exit_preview", "Exit preview"),
         ("ctrl+shift+m", "exit_preview", "Exit preview"),
@@ -25,6 +27,42 @@ class PreviewViewer(BaseMarkdownViewer):
         if hasattr(self.parent, 'toggle_markdown_preview'):
             self.parent.toggle_markdown_preview()
 
+    def action_toggle_toc(self) -> None:
+        """Toggle visibility of the table of contents tree."""
+        try:
+            toc = self.query_one(Tree)
+            # Toggle visibility and display style
+            visible = toc.visible
+            toc.visible = not visible
+            toc.styles.display = "none" if visible else "block"
+        except Exception:
+            pass
+
+    def on_blur(self, event: Blur) -> None:
+        """Store current scroll offset when focus leaves the viewer."""
+        try:
+            self._saved_offset = (self.scroll_offset.x, self.scroll_offset.y)
+        except Exception:
+            self._saved_offset = (0, 0)
+        # Call parent handler if exists
+        try:
+            return super().on_blur(event)
+        except AttributeError:
+            return None
+
+    def on_focus(self, event: Focus) -> None:
+        """No-op override to maintain current scroll position on focus."""
+        # Do nothing to preserve scroll position when the widget gains focus.
+        pass
+
+    def on_mount(self) -> None:
+        """Disable focus on inner Markdown widget so focus stays on PreviewViewer."""
+        try:
+            inner = self.query_one(InnerMarkdown)
+            inner.can_focus = False
+        except Exception:
+            pass
+
 
 
 class MarkdownPreviewMixin:
@@ -35,12 +73,11 @@ class MarkdownPreviewMixin:
         self.text_area.visible = False
         # Collapse TextArea to free layout space
         self.text_area.styles.display = "none"
-        # Use the standalone PreviewViewer that handles exit keys
-        try:
-            self.markdown_viewer = PreviewViewer(markdown_text, toc=True)
-        except TypeError:
-            # Fallback if toc not supported
-            self.markdown_viewer = PreviewViewer(markdown_text)
+        # Use `show_table_of_contents=True` to enable table of contents
+        self.markdown_viewer = PreviewViewer(
+            markdown_text,
+            show_table_of_contents=True,
+        )
         self.markdown_viewer.styles.width = "100%"
         self.markdown_viewer.styles.height = "100%"
         # Match TextArea padding: 2 lines vertical, 3 spaces horizontal
