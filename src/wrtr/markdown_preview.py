@@ -68,59 +68,95 @@ class PreviewViewer(BaseMarkdownViewer):
 class MarkdownPreviewMixin:
     """Mixin that adds markdown preview toggle to a TextArea-containing widget."""
     def load_markdown_viewer(self, markdown_text: str) -> None:
-        """Hide TextArea and mount a MarkdownViewer with given text."""
-        # Assume self.text_area exists
+        """Hide TextArea and mount (or reuse) a MarkdownViewer with given text."""
+        # Hide the editor TextArea
         self.text_area.visible = False
-        # Collapse TextArea to free layout space
         self.text_area.styles.display = "none"
-        # Use `show_table_of_contents=True` to enable table of contents
-        self.markdown_viewer = PreviewViewer(
-            markdown_text,
-            show_table_of_contents=True,
-        )
-        self.markdown_viewer.styles.width = "100%"
-        self.markdown_viewer.styles.height = "100%"
-        # Match TextArea padding: 2 lines vertical, 3 spaces horizontal
-        self.markdown_viewer.styles.margin = 0
-        self.markdown_viewer.styles.padding = (2, 3)
-        # Mount and then focus the TOC tree for navigation (fall back to viewer)
-        self.mount(self.markdown_viewer)
+
+        # If preview exists, try fast in-place update
+        if hasattr(self, "markdown_viewer"):
+            updated = False
+            # Fast path: widget-level update()
+            try:
+                self.markdown_viewer.update(markdown_text)
+                updated = True
+            except Exception:
+                pass
+            # Fallback: update inner Markdown child
+            if not updated:
+                try:
+                    inner = self.markdown_viewer.query_one(lambda w: w.__class__.__name__ in ("Markdown", "InnerMarkdown"))
+                    inner.update(markdown_text)
+                    updated = True
+                except Exception:
+                    pass
+            # Last resort: remove and rebuild once
+            if not updated:
+                try:
+                    self.markdown_viewer.remove()
+                except Exception:
+                    pass
+                del self.markdown_viewer
+
+        # On first use or after fallback deletion, mount a new viewer
+        if not hasattr(self, "markdown_viewer"):
+            self.markdown_viewer = PreviewViewer(markdown_text, show_table_of_contents=True)
+            self.markdown_viewer.styles.width = "100%"
+            self.markdown_viewer.styles.height = "100%"
+            self.markdown_viewer.styles.margin = 0
+            self.markdown_viewer.styles.padding = (2, 3)
+            self.mount(self.markdown_viewer)
+
+        # Show the preview
+        self.markdown_viewer.visible = True
+        self.markdown_viewer.styles.display = "block"
+
+        # Focus TOC or viewer after mount/layout
         def focus_toc() -> None:
             try:
-                # Focus the table of contents tree for scrolling/navigation
-                toc_tree = self.markdown_viewer.query_one(Tree)
-                toc_tree.focus()
+                toc = self.markdown_viewer.query_one(Tree)
+                toc.focus()
             except Exception:
-                # Fallback to focusing the viewer itself (for exit keys)
                 try:
                     self.markdown_viewer.focus()
                 except Exception:
                     pass
-        # Delay focus until after mount cycle
         self.call_later(focus_toc)
 
     def restore_text_area(self) -> None:
-        """Remove MarkdownViewer and show the TextArea."""
-        if hasattr(self, 'markdown_viewer'):
-            self.markdown_viewer.remove()
-            del self.markdown_viewer
-        # Restore TextArea visibility and layout
+        """Hide MarkdownViewer and show the TextArea fast (avoid remove())."""
+        if hasattr(self, "markdown_viewer"):
+            # Fast-hide instead of removal
+            try:
+                self.markdown_viewer.visible = False
+                self.markdown_viewer.styles.display = "none"
+            except Exception:
+                # fallback to full removal
+                try:
+                    self.markdown_viewer.remove()
+                    del self.markdown_viewer
+                except Exception:
+                    pass
+
+        # Restore editor TextArea
         self.text_area.styles.display = "block"
         self.text_area.visible = True
-        # Focus the restored text area
-        self.text_area.focus()
+        try:
+            self.text_area.focus()
+        except Exception:
+            pass
 
     def toggle_markdown_preview(self) -> None:
         """Toggle between TextArea and MarkdownViewer preview."""
-        if hasattr(self, 'markdown_viewer'):
+        if hasattr(self, "markdown_viewer") and self.markdown_viewer.visible:
             self.restore_text_area()
         else:
             self.load_markdown_viewer(self.text_area.text)
 
     def on_key(self, event: Key) -> None:
         """Catch exit-preview keys even when focus is in the TOC tree."""
-        # Only intercept when preview is active
-        if hasattr(self, 'markdown_viewer'):
+        # Only intercept when preview is active (visible)
+        if hasattr(self, 'markdown_viewer') and self.markdown_viewer.visible:
             key = event.key or getattr(event, 'name', None)
             if key in ('escape', 'ctrl+w', 'ctrl+shift+m'):
                 self.restore_text_area()
