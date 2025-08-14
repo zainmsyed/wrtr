@@ -508,10 +508,13 @@ class wrtr(GlobalKeyHandler, App):
             # ignore stack issues and continue
             pass
 
-        # If focused widget is a markdown preview, restore its editor
-        if hasattr(focused, 'parent') and hasattr(focused.parent, 'toggle_markdown_preview'):
+        # If focused widget is a Markdown preview (viewer), restore its editor
+        from textual.widgets import Markdown as MarkdownViewer
+        # Focus might be the Markdown viewer itself; in that case restore
+        if isinstance(focused, MarkdownViewer) and hasattr(focused, 'parent') and hasattr(focused.parent, 'toggle_markdown_preview'):
             focused.parent.toggle_markdown_preview()
             return
+        # Do not treat TextArea (editor) focus as a preview; avoid toggling preview
 
         # Otherwise, go back to HomeScreen
         self.action_to_home()
