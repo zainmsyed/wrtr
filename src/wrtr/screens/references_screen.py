@@ -5,6 +5,8 @@ from pathlib import Path
 from textual.events import Key
 from wrtr.interfaces.backlink_interface import BacklinkClicked
 from pathlib import Path
+from wrtr.services.recent_files_service import RecentFilesService
+from wrtr.services.keybinding_service import KeybindingService
 
 class ReferencesScreen(Screen):
     """Displays all references to a given backlink target."""
@@ -81,13 +83,36 @@ class ReferencesScreen(Screen):
 
     async def on_key(self, event: Key) -> None:
         """Handle Escape to close, and Enter/Ctrl+Enter to select reference."""
-        if event.key == "escape":
+        key = event.key or getattr(event, 'name', None)
+
+        if key == "escape":
             self.app.pop_screen()
             event.stop()
-        elif event.key in ("enter", "ctrl+enter"):  # support keyboard navigation
+        elif key in ("enter", "ctrl+enter"):  # support keyboard navigation
             idx = self.list_view.index
             path, line_no, _ = self.references[idx]
             setattr(self.app, '_suppress_backlink_clicks', True)
             self.app.pop_screen()
             await self.app.action_open_file(str(path))
             event.stop()
+
+        # Mirror RecentFilesScreen: allow Ctrl+Shift+M to load selected reference
+        if key == "ctrl+shift+m":
+            try:
+                lv = self.list_view
+                idx = lv.index
+                if idx is not None and 0 <= idx < len(lv.children):
+                    # Determine path from the stored references list
+                    path, line_no, _ = self.references[idx]
+                    # Close this screen and trigger centralized loader
+                    self.app.pop_screen()
+                    await KeybindingService.trigger("load_in_editor_b", self.app, path)
+                    event.stop()
+                    return
+            except Exception:
+                try:
+                    self.app.pop_screen()
+                except Exception:
+                    pass
+                event.stop()
+                return

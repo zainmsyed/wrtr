@@ -13,6 +13,7 @@ from wrtr.editor import MarkdownEditor
 from wrtr.screens.save_as_screen import SaveAsScreen
 from wrtr.screens.confirm_screen import ConfirmScreen
 from wrtr.services.recent_files_service import RecentFilesService  # use service for recent files
+from wrtr.services.keybinding_service import KeybindingService
 from wrtr.favorite_manager import get as get_favorites, add, remove
 import tempfile
 import shutil  # add near top imports
@@ -286,24 +287,24 @@ class FileBrowser(DirectoryTree):
             event.stop()
             return
 
-        # Only handle file-open keystrokes (Enter and Ctrl+M) for file nodes
-        if event.key not in ("enter", "ctrl+m"):
+        # Only handle file-open keystrokes (Enter and Ctrl+M/Ctrl+Shift+M) for file nodes
+        if event.key not in ("enter", "ctrl+m", "ctrl+shift+m"):
             return
         node = self.cursor_node
         if not node or not node.data.path.is_file():
             return
         path = node.data.path
         path_str = str(path)
-        try:
-            content = Path(path_str).read_text(encoding="utf-8")
-        except UnicodeDecodeError:
-            # Skip binary or unreadable files
-            self.app.notify(f"Cannot open non-text file: {path.name}", severity="warning")
-            return
         app = self.app
 
         if event.key == "enter":
-            # Enter → open in focused editor (or editor_a)
+            # Enter → open in focused editor (or editor_a). Read file here
+            try:
+                content = Path(path_str).read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                # Skip binary or unreadable files
+                self.app.notify(f"Cannot open non-text file: {path.name}", severity="warning")
+                return
             focused = app.focused
             editor = focused if isinstance(focused, MarkdownEditor) else app.query_one("#editor_a")
             editor.load_text(content)
@@ -311,17 +312,17 @@ class FileBrowser(DirectoryTree):
             editor.focus()
             RecentFilesService.add(Path(path_str))
             event.stop()
-        elif event.key == "ctrl+m":
-            # Ctrl+M → always open in editor_b
-            editor = app.query_one("#editor_b")
-            app.query_one("#editor_a").visible = True
-            app.query_one("#editor_b").visible = True
-            # Update layout via LayoutManager instead of deprecated method
-            app.layout_manager.layout_resize()
-            editor.load_text(content)
-            editor.set_path(Path(path_str))
-            editor.focus()
-            RecentFilesService.add(Path(path_str))
+
+        elif event.key in ("ctrl+m", "ctrl+shift+m"):
+            # Delegate loading into editor_b to KeybindingService which will
+            # perform the file read on a background thread and update recent
+            # files. This avoids blocking the event loop here.
+            try:
+                await KeybindingService.trigger("load_in_editor_b", app, Path(path_str))
+            except Exception:
+                # Failure handled/logged by service; ensure we don't crash
+                pass
             event.stop()
+            return
         else:
             return

@@ -2,6 +2,7 @@ from pathlib import Path
 from textual.widgets import ListView, ListItem, Label
 from textual.screen import ModalScreen
 from wrtr.services.recent_files_service import RecentFilesService
+from wrtr.services.keybinding_service import KeybindingService
 from textual.containers import Center, Vertical
 from textual.events import Key
 
@@ -87,50 +88,24 @@ class RecentFilesScreen(ModalScreen[Path | None]):
         # close the modal and forward the request to the App-level preview
         # toggler so the preview state can be changed even when a modal is active.
         if key == "ctrl+shift+m":
-            # If there's a selected item in the ListView, open it in editor_b
+            # If there's a selected item in the ListView, ask the
+            # KeybindingService to load it into editor_b. This centralizes
+            # the behavior and performs file I/O on a background thread.
             try:
                 lv = self.query_one("#recent_list")
                 idx = lv.index
-                # Defensive: ensure index is valid and the item has a name
                 if idx is not None and 0 <= idx < len(lv.children):
                     item = lv.children[idx]
-                    name = getattr(item, 'name', None)
+                    name = getattr(item, "name", None)
                     if name:
                         path = Path(name)
-                        try:
-                            content = path.read_text(encoding="utf-8")
-                        except Exception:
-                            # If file unreadable, fall back to dismiss only
-                            self.dismiss(None)
-                            event.stop()
-                            return
-
-                        app = self.app
                         # Close modal before manipulating editors
                         self.dismiss(None)
-
-                        # Ensure editor panes are visible and resized
-                        try:
-                            app.query_one("#editor_a").visible = True
-                            app.query_one("#editor_b").visible = True
-                            app.layout_manager.layout_resize()
-                        except Exception:
-                            pass
-
-                        # Load into editor_b (mirror FileBrowser behavior)
-                        try:
-                            editor = app.query_one("#editor_b")
-                            editor.load_text(content)
-                            editor.set_path(path)
-                            editor.focus()
-                            RecentFilesService.add(path)
-                        except Exception:
-                            pass
-
+                        # Trigger the registered action (async)
+                        await KeybindingService.trigger("load_in_editor_b", self.app, path)
                         event.stop()
                         return
             except Exception:
-                # If anything goes wrong, just dismiss and stop the event
                 try:
                     self.dismiss(None)
                 except Exception:
