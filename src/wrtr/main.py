@@ -146,11 +146,20 @@ class wrtr(GlobalKeyHandler, App):
         # Register a demo /echo slash command for manual testing (non-destructive)
         try:
             from wrtr.services.slash_commands import SlashCommandService
-
             def _echo(args: str, full: str) -> str:
                 return f"echo:{args}"
 
             SlashCommandService.register("echo", _echo, help="Echoes args for testing")
+
+            # Register /ai command (Phase 2 shim). Uses a lazy ai_helper wrapper so
+            # wrtr does not require hlpr to be installed.
+            from wrtr.services import ai_helper
+
+            async def _ai_handler(args: str, full: str) -> str:
+                # args already contains the prompt string after /ai
+                return await ai_helper.generate(args)
+
+            SlashCommandService.register("ai", _ai_handler, help="Call local AI helper (hlpr) to generate text")
         except Exception:
             # Non-fatal: registration is only for convenience during development
             pass
