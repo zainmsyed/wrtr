@@ -3,6 +3,7 @@ from textual.widgets import ListView, ListItem, Label
 from textual.screen import ModalScreen
 from wrtr.services.recent_files_service import RecentFilesService
 from textual.containers import Center, Vertical
+from textual.events import Key
 
 class RecentFilesScreen(ModalScreen[Path | None]):
     """Modal that shows ≤ 5 recent files."""
@@ -53,3 +54,17 @@ class RecentFilesScreen(ModalScreen[Path | None]):
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         if event.item.name:
             self.dismiss(Path(event.item.name))
+
+    def on_key(self, event: Key) -> None:
+        """Handle Escape explicitly so the modal dismisses and the key event
+        does not propagate to the App/global handler (which could pop the
+        HomeScreen underneath).
+        """
+        if event.key == "escape":
+            # Dismiss with None (no selection) and stop propagation
+            self.dismiss(None)
+            event.stop()
+            return
+        # Do not call super().on_key (ModalScreen doesn't implement it).
+        # Returning lets Textual continue normal event dispatching.
+        return

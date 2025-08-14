@@ -64,9 +64,10 @@ class wrtr(GlobalKeyHandler, App):
         ("ctrl+o", "cycle_root", "Toggle Root"),
         ("ctrl+w", "close_pane", "Close Pane"),
         ("ctrl+s", "save_file", "Save"),
-        ("ctrl+f7", "toggle_spell_check", "Toggle Spell Check"),
+    ("ctrl+f7", "toggle_spell_check", "Toggle Spell Check"),
         ("ctrl+shift+m", "toggle_markdown_preview", "Toggle MD Preview"),
     ("ctrl+r", "show_recent", "Recent Files"),  # Updated keybinding
+    ("ctrl+escape", "go_home", "Go Home"),
     ]
 
     # Default workspace directory for Terminal Writer (in project root)
@@ -193,6 +194,26 @@ class wrtr(GlobalKeyHandler, App):
         
         # Now, push a fresh HomeScreen
         self.push_screen(HomeScreen())
+
+    def action_go_home(self) -> None:
+        """Global binding to always return to Home immediately.
+
+        This is bound to Ctrl+Esc and will clear all pushed screens and show
+        a fresh HomeScreen regardless of current context.
+        """
+        # Pop all screens and push HomeScreen
+        try:
+            while len(self.screen_stack) > 1:
+                self.pop_screen()
+        except Exception:
+            # Ignore errors while popping
+            pass
+        # Push a fresh HomeScreen
+        try:
+            self.push_screen(HomeScreen())
+        except Exception:
+            # If push fails, at least ensure screen stack is trimmed
+            pass
 
     def action_toggle_browser(self) -> None:
         """Toggle the visibility of the file browser pane."""
