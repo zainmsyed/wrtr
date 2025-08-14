@@ -11,6 +11,7 @@ from wrtr.modals.palette_dismiss_modal import PaletteDismissModal
 from typing import Iterable
 from textual.widget import Widget
 from textual.events import Key
+from wrtr.services.keybinding_service import KeybindingService
 
 class GlobalSearchScreen(PaletteDismissModal[None]):
     """Global fuzzy search overlay for filenames and contents."""
@@ -115,6 +116,24 @@ class GlobalSearchScreen(PaletteDismissModal[None]):
 
     def on_key(self, event: Key) -> None:
         """Intercept keys to manage focus and navigation."""
+        # Support Ctrl+Shift+M: if a search result is selected, dismiss the
+        # overlay and load the file into editor_b via the centralized service.
+        if event.key == "ctrl+shift+m":
+            try:
+                results = self.query_one("#results")
+                idx = results.index
+                if idx is not None and 0 <= idx < len(results.children):
+                    path = results.children[idx].path
+                    # Dismiss modal and schedule the load action asynchronously
+                    self.dismiss(None)
+                    import asyncio
+
+                    asyncio.create_task(KeybindingService.trigger("load_in_editor_b", self.app, path))
+                    event.stop()
+                    return
+            except Exception:
+                # If anything goes wrong, fall through to default handling
+                pass
         if event.key == "escape":
             self.dismiss(None)
             event.stop()
