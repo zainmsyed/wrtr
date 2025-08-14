@@ -238,7 +238,13 @@ class wrtr(GlobalKeyHandler, App):
         """
         Cycle the file browser through wrtr folder, favorites, and computer root.
         """
-        self.query_one("#file-browser").cycle_root()
+        fb = self.query_one("#file-browser")
+        fb.cycle_root()
+        # Ensure the file browser receives focus so the user can navigate immediately
+        try:
+            fb.focus()
+        except Exception:
+            pass
 
 
 
