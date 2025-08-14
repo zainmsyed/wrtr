@@ -58,7 +58,7 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
         self.text_area = make_markdown_text_area(initial_text="", language="markdown")
         # Setup view helper for cursor movement and replacements
         self.view = TextView(self.text_area)
-        self.text_area.styles.padding = (2, 3)
+        self.text_area.styles.padding = (2, 3, 1, 3)
         self.text_area.styles.width = "100%"  # Ensure full width
         self.text_area.styles.height = "100%"  # Ensure full height
         self.status_bar = EditorStatusBar()
