@@ -38,8 +38,20 @@ class ReferencesScreen(Screen):
                     snippet = line.strip()
                     self.references.append((file, idx, snippet))
         # Populate list view
+        from rich.text import Text
+
+        def _trim(s: str, max_len: int = 100) -> str:
+            s = s.strip().replace("\n", " ")
+            return s if len(s) <= max_len else s[: max_len - 1].rstrip() + "…"
+
         for file_path, line_no, snippet in self.references:
-            item = ListItem(Label(f"{file_path.name}:{line_no} → {snippet}"))
+            txt = Text()
+            txt.append(f"{file_path.name}:{line_no}", style="bold")
+            txt.append("\n")
+            txt.append(_trim(snippet))
+            txt.append("\n")
+            txt.append(str(file_path.parent), style="dim")
+            item = ListItem(Label(txt))
             await self.list_view.append(item)
 
     async def on_list_view_selected(self, message: ListView.Selected) -> None:
