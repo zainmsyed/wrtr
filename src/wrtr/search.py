@@ -4,6 +4,7 @@ Module: Search Pane
 from pathlib import Path
 import asyncio  # run blocking file I/O in background thread
 from rapidfuzz import process, fuzz
+from wrtr.favorite_manager import get as get_favorites
 from textual.widgets import Input, ListView, ListItem, Static
 from textual.containers import Vertical
 from wrtr.modals.palette_dismiss_modal import PaletteDismissModal
@@ -47,7 +48,10 @@ class GlobalSearchScreen(PaletteDismissModal[None]):
 
     def __init__(self, placeholder: str = "Search...") -> None:
         super().__init__()
+        # store placeholder text and runtime flags
         self.placeholder = placeholder
+        # Whether to include favorites in the search index (toggleable at runtime)
+        self.include_favorites = True
 
     def compose_modal(self) -> Iterable[Widget]:
         with Vertical(id="search-box"):
@@ -72,8 +76,9 @@ class GlobalSearchScreen(PaletteDismissModal[None]):
         combined = sorted(t_matches + c_matches, key=lambda x: x[1], reverse=True)[:15]
         for label, score, _ in combined:
             path = self.titles.get(label) or self.contents.get(label)
-            # wrap label string in a Static widget for ListItem
-            item = ListItem(Static(label))
+            # Show label with its parent path for extra context
+            display = f"{label} — {path.parent}"
+            item = ListItem(Static(display))
             item.path = path
             await results.append(item)
 
@@ -111,22 +116,56 @@ class GlobalSearchScreen(PaletteDismissModal[None]):
         else:
             super().on_key(event)
 
+        # Toggle inclusion of favorites in the index at runtime
+        if event.key.lower() == "f":
+            # flip the flag and rebuild the index in background
+            self.include_favorites = not getattr(self, "include_favorites", True)
+            asyncio.create_task(self._rebuild_index())
+            event.stop()
+
+    async def _rebuild_index(self) -> None:
+        """Rebuild the search index in a background thread and refresh results."""
+        titles, contents = await asyncio.to_thread(self._scan_files)
+        self.titles = titles
+        self.contents = contents
+
     def _scan_files(self) -> tuple[dict[str, Path], dict[str, Path]]:
-        """Scan the workspace for .md files and index their names and content lines."""
+        """Scan the workspace for .md files and index their names and content lines.
+
+        Includes files from `wrtr/` and, when enabled, from favorite directories.
+        """
         titles: dict[str, Path] = {}
         contents: dict[str, Path] = {}
-        # Only scan markdown files in the Terminal Writer data directory (wrtr/)
-        data_dir = Path.cwd() / "wrtr"
-        if not data_dir.exists():
-            return {}, {}
-        for file in data_dir.rglob("*.md"):
-            name = file.name
-            titles[name] = file
+
+        def _add_file_to_index(file: Path, source_tag: str) -> None:
             try:
+                base_name = file.name
+                label = base_name if base_name not in titles else f"{base_name} [{source_tag}]"
+                titles[label] = file
                 lines = file.read_text(encoding="utf-8").splitlines()
             except Exception:
-                continue
+                return
             for i, line in enumerate(lines, start=1):
-                key = f"{name}:{i}:{line.strip()}"
-                contents[key] = file
+                key = f"{label}:{i}:{line.strip()}"
+                if key not in contents:
+                    contents[key] = file
+
+        # Scan markdown files in the Terminal Writer data directory (wrtr/)
+        data_dir = Path.cwd() / "wrtr"
+        if data_dir.exists():
+            for file in data_dir.rglob("*.md"):
+                _add_file_to_index(file, "wrtr")
+
+        # Optionally scan favorites
+        if getattr(self, "include_favorites", True):
+            try:
+                fav_dirs = get_favorites()
+            except Exception:
+                fav_dirs = []
+            for fav in fav_dirs:
+                if not fav.exists():
+                    continue
+                for file in fav.rglob("*.md"):
+                    _add_file_to_index(file, "fav")
+
         return titles, contents
