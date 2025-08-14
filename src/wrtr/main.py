@@ -66,6 +66,7 @@ class wrtr(GlobalKeyHandler, App):
         ("ctrl+s", "save_file", "Save"),
         ("ctrl+f7", "toggle_spell_check", "Toggle Spell Check"),
         ("ctrl+shift+m", "toggle_markdown_preview", "Toggle MD Preview"),
+    ("ctrl+r", "show_recent", "Recent Files"),  # Updated keybinding
     ]
 
     # Default workspace directory for Terminal Writer (in project root)
@@ -150,6 +151,22 @@ class wrtr(GlobalKeyHandler, App):
         # Lazy-load search screen
         GSS = importlib.import_module("wrtr.search").GlobalSearchScreen
         await self.push_screen(GSS())
+
+    def action_show_recent(self) -> None:
+        """Show the recent-files modal from anywhere and open the chosen file.
+
+        push_screen_wait must be called from a worker, so run the interaction in a
+        background worker task.
+        """
+        async def _show():
+            RFS = importlib.import_module("wrtr.screens.recent_files_screen").RecentFilesScreen
+            chosen = await self.push_screen_wait(RFS())
+            if chosen:
+                # chosen may be a Path; ensure string path passed to open action
+                await self.action_open_file(str(chosen))
+
+        # Schedule the worker to show the modal and wait for dismissal
+        self.run_worker(_show(), exclusive=True)
 
     async def action_switch_workspace(self, number: str) -> None:
         # TODO: switch to workspace number
@@ -460,10 +477,21 @@ class wrtr(GlobalKeyHandler, App):
     def action_handle_escape(self) -> None:
         """Close markdown preview if open (for any viewer), else go home."""
         focused = self.focused
+        # If there's a pushed screen/modal, pop it first (dismiss modal)
+        try:
+            if len(self.screen_stack) > 1:
+                # pop the top-most screen/modal and return to previous view
+                self.pop_screen()
+                return
+        except Exception:
+            # ignore stack issues and continue
+            pass
+
         # If focused widget is a markdown preview, restore its editor
         if hasattr(focused, 'parent') and hasattr(focused.parent, 'toggle_markdown_preview'):
             focused.parent.toggle_markdown_preview()
             return
+
         # Otherwise, go back to HomeScreen
         self.action_to_home()
 
