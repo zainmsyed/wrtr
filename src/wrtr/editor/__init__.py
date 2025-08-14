@@ -21,6 +21,9 @@ from .buffer import TextBuffer
 from .view import TextView
 from textual.events import MouseDown
 from wrtr.interfaces.backlink_interface import BacklinkClicked
+from wrtr.services.slash_commands import SlashCommandService
+import asyncio
+from wrtr.logger import logger
 
 
 class MarkdownEditor(MarkdownPreviewMixin, Vertical):
@@ -106,10 +109,61 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
         self.autosave.schedule()
         self.status_bar.saved = False
         # Sync buffer content and cursor position
+        prev_row = getattr(self, '_prev_row', None)
         self.buffer.set_text(self.text_area.text)
         row, col = self.text_area.cursor_location
         self.buffer.cursor_row = row
         self.buffer.cursor_col = col
+        # Detect Enter/newline by observing a row increase. If the user pressed Enter
+        # and moved to a new row, inspect the previous line for a slash command.
+        try:
+            if prev_row is not None and row > prev_row:
+                # previous line is at index prev_row
+                full_text = self.buffer.get_text()
+                # compute start offset of previous line
+                start_off = self.buffer.rowcol_to_offset(prev_row, 0)
+                nl = full_text.find("\n", start_off)
+                end_off = nl if nl != -1 else len(full_text)
+                line = full_text[start_off:end_off]
+                parsed = SlashCommandService.parse(line)
+                if parsed:
+                    # Run the command asynchronously (keep UI responsive)
+                    placeholder = "…thinking (hlpr)…"
+                    # Replace the previous line with placeholder
+                    try:
+                        start_rc = (prev_row, 0)
+                        end_rc = (prev_row, len(line))
+                        self.view.replace_range(start=start_rc, end=end_rc, insert=placeholder)
+                    except Exception:
+                        new_text = full_text[:start_off] + placeholder + full_text[end_off:]
+                        self.view.set_text(new_text)
+
+                    async def _run_cmd():
+                        try:
+                            result = await SlashCommandService.execute(line)
+                        except Exception as e:
+                            result = f"Command error: {e}"
+                        logger.debug(f"Slash command result for line '{line}': {result}")
+                        try:
+                            cur_text = self.buffer.get_text()
+                            start = self.buffer.rowcol_to_offset(prev_row, 0)
+                            end = start + len(placeholder)
+                            new_text = cur_text[:start] + str(result) + cur_text[end:]
+                            self.view.set_text(new_text)
+                            try:
+                                self._show_notification(f"Command /{parsed[0]} inserted result",)
+                            except Exception:
+                                pass
+                            new_row, new_col = self.buffer.convert_text_position_to_cursor(start + len(str(result)))
+                            self.view.move_cursor(new_row, new_col, center=False)
+                        except Exception:
+                            pass
+
+                    asyncio.create_task(_run_cmd())
+        except Exception:
+            pass
+        # Save current row for next change event
+        self._prev_row = row
         # Recompute backlink highlights so color overlays follow edits
         try:
             self.view.highlight_backlinks()
@@ -178,6 +232,77 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
                     event.stop()
                     return
         # Default handler
+        # Intercept Enter to run slash commands when present on the current line
+        if event.key == "enter":
+            try:
+                # Obtain current buffer text and cursor position
+                full_text = self.buffer.get_text()
+                row, col = self.text_area.cursor_location
+                start_off = self.buffer.rowcol_to_offset(row, 0)
+                # end of current line
+                next_newline = full_text.find("\n", start_off)
+                end_off = next_newline if next_newline != -1 else len(full_text)
+                line = full_text[start_off:end_off]
+                parsed = SlashCommandService.parse(line)
+                if parsed:
+                    # Debug notification so users see the command was detected
+                    try:
+                        self._show_notification(f"Running command: /{parsed[0]}",)
+                    except Exception:
+                        pass
+                    # Show placeholder while running command
+                    placeholder = "…thinking (hlpr)…"
+                    # compute start and end as (row,col) pairs for replace_range
+                    start_rc = (row, 0)
+                    end_rc = (row, len(line))
+                    # Replace visible text in the TextArea
+                    try:
+                        self.view.replace_range(start=start_rc, end=end_rc, insert=placeholder)
+                    except Exception:
+                        # Fallback to direct load_text replace if replace_range isn't available
+                        new_text = full_text[:start_off] + placeholder + full_text[end_off:]
+                        self.view.set_text(new_text)
+
+                    async def _run_command():
+                        try:
+                            result = await SlashCommandService.execute(line)
+                        except Exception as e:
+                            result = f"Command error: {e}"
+                        logger.debug(f"Slash command result for line '{line}': {result}")
+                        # Replace placeholder with result
+                        try:
+                            # refresh full_text because the underlying buffer may have changed
+                            cur_text = self.buffer.get_text()
+                            # find placeholder occurrence at expected location
+                            start = self.buffer.rowcol_to_offset(row, 0)
+                            end = start + len(placeholder)
+                            # Build replacement text
+                            new_text = cur_text[:start] + str(result) + cur_text[end:]
+                            # Apply
+                            self.view.set_text(new_text)
+                            try:
+                                self._show_notification(f"Command /{parsed[0]} inserted result",)
+                            except Exception:
+                                pass
+                            # Move cursor to end of inserted result
+                            new_row, new_col = self.buffer.convert_text_position_to_cursor(start + len(str(result)))
+                            self.view.move_cursor(new_row, new_col, center=False)
+                        except Exception:
+                            # Best-effort: if anything fails, reload without change
+                            pass
+
+                    asyncio.create_task(_run_command())
+                    event.stop()
+                    # mark handled so child TextArea doesn't also process it
+                    try:
+                        setattr(event, '_handled', True)
+                    except Exception:
+                        pass
+                    return
+            except Exception:
+                # On any error, fall back to default handling
+                pass
+
         await handle_key_event(self, event)
 
     async def on_input_changed(self, message: Input.Changed) -> None:

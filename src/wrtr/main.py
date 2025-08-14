@@ -143,6 +143,18 @@ class wrtr(GlobalKeyHandler, App):
         self.push_screen(HomeScreen())
         self.layout_manager.initialize()
 
+        # Register a demo /echo slash command for manual testing (non-destructive)
+        try:
+            from wrtr.services.slash_commands import SlashCommandService
+
+            def _echo(args: str, full: str) -> str:
+                return f"echo:{args}"
+
+            SlashCommandService.register("echo", _echo, help="Echoes args for testing")
+        except Exception:
+            # Non-fatal: registration is only for convenience during development
+            pass
+
     def watch_theme(self, new_theme: str) -> None:
         """Called by Textual every time `self.theme` changes."""
         self.theme_manager.save(new_theme)
