@@ -116,18 +116,9 @@ class GlobalSearchScreen(PaletteDismissModal[None]):
         else:
             super().on_key(event)
 
-        # Toggle inclusion of favorites in the index at runtime
-        if event.key.lower() == "f":
-            # flip the flag and rebuild the index in background
-            self.include_favorites = not getattr(self, "include_favorites", True)
-            asyncio.create_task(self._rebuild_index())
-            event.stop()
+    # Favorites are included by default; runtime toggle removed.
 
-    async def _rebuild_index(self) -> None:
-        """Rebuild the search index in a background thread and refresh results."""
-        titles, contents = await asyncio.to_thread(self._scan_files)
-        self.titles = titles
-        self.contents = contents
+    # No runtime rebuild helper required — index builds on mount and includes favorites by default.
 
     def _scan_files(self) -> tuple[dict[str, Path], dict[str, Path]]:
         """Scan the workspace for .md files and index their names and content lines.
