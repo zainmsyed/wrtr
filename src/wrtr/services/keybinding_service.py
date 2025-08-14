@@ -62,6 +62,18 @@ async def _load_path_into_editor_b(app: App, path: Path) -> None:
         return
 
     try:
+        # Ensure any overlays/screens (like Home, Recent, Search) are popped so
+        # the main editor layout is visible before we focus editor_b.
+        try:
+            # Pop screens until we're back to the base application view.
+            while hasattr(app, 'screen_stack') and len(app.screen_stack) > 1:
+                try:
+                    app.pop_screen()
+                except Exception:
+                    break
+        except Exception:
+            logger.debug("Error while popping screens before loading into editor_b")
+
         # Make sure editor panes are visible and resize layout if needed
         try:
             app.query_one("#editor_a").visible = True
