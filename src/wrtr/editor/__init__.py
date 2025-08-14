@@ -55,12 +55,11 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
     def compose(self) -> Generator[Widget, None, None]:
         """Inner composition: TextArea + StatusBar."""
         from .text_area_factory import make_markdown_text_area
+        # Create the text area
         self.text_area = make_markdown_text_area(initial_text="", language="markdown")
         # Setup view helper for cursor movement and replacements
         self.view = TextView(self.text_area)
-        self.text_area.styles.padding = (2, 3)
-        self.text_area.styles.width = "100%"  # Ensure full width
-        self.text_area.styles.height = "100%"  # Ensure full height
+        # Status bar below the text area
         self.status_bar = EditorStatusBar()
         yield self.text_area
         yield self.status_bar

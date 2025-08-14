@@ -37,9 +37,9 @@ uv run -m wrtr.main
 
 ## Documentation
 
-- [Welcome Guide](docs/Welcome.md)
-- [Markdown Cheat Sheet](docs/Markdown_Cheat_Sheet.md)
-- [Key Bindings](docs/Key_Binding_Cheat_Sheet.md)
+- [Welcome Guide](docs/1.%20Welcome.md)
+- [Markdown Cheat Sheet](docs/2.%20Key_Binding_Cheat_Sheet.md)
+- [Key Bindings](docs/3.%20Markdown_Cheat_Sheet.md)
 
 ---
 

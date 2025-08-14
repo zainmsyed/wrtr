@@ -46,9 +46,12 @@ class wrtr(GlobalKeyHandler, App):
     Main Textual application class for Terminal Writer.
     """
     # Enable custom CSS for component-class styling
-    # Load custom stylesheet located at project root
+    # Load standard and Textual-specific stylesheets located at project root
     from pathlib import Path
-    CSS_PATH = str(Path(__file__).parent.parent.parent / "styles.css")
+    CSS_PATH = [
+        str(Path(__file__).parent.parent.parent / "styles.css"),
+        str(Path(__file__).parent.parent.parent / "styles.tcss"),
+    ]
     BINDINGS = [
         ("ctrl+f", "show_search", "Search"),
         # ("ctrl+1", "switch_workspace('1')", "Workspace 1"),
@@ -61,8 +64,10 @@ class wrtr(GlobalKeyHandler, App):
         ("ctrl+o", "cycle_root", "Toggle Root"),
         ("ctrl+w", "close_pane", "Close Pane"),
         ("ctrl+s", "save_file", "Save"),
-        ("ctrl+f7", "toggle_spell_check", "Toggle Spell Check"),
+    ("ctrl+f7", "toggle_spell_check", "Toggle Spell Check"),
         ("ctrl+shift+m", "toggle_markdown_preview", "Toggle MD Preview"),
+    ("ctrl+r", "show_recent", "Recent Files"),  # Updated keybinding
+    ("ctrl+escape", "go_home", "Go Home"),
     ]
 
     # Default workspace directory for Terminal Writer (in project root)
@@ -148,6 +153,22 @@ class wrtr(GlobalKeyHandler, App):
         GSS = importlib.import_module("wrtr.search").GlobalSearchScreen
         await self.push_screen(GSS())
 
+    def action_show_recent(self) -> None:
+        """Show the recent-files modal from anywhere and open the chosen file.
+
+        push_screen_wait must be called from a worker, so run the interaction in a
+        background worker task.
+        """
+        async def _show():
+            RFS = importlib.import_module("wrtr.screens.recent_files_screen").RecentFilesScreen
+            chosen = await self.push_screen_wait(RFS())
+            if chosen:
+                # chosen may be a Path; ensure string path passed to open action
+                await self.action_open_file(str(chosen))
+
+        # Schedule the worker to show the modal and wait for dismissal
+        self.run_worker(_show(), exclusive=True)
+
     async def action_switch_workspace(self, number: str) -> None:
         # TODO: switch to workspace number
         pass
@@ -174,6 +195,26 @@ class wrtr(GlobalKeyHandler, App):
         # Now, push a fresh HomeScreen
         self.push_screen(HomeScreen())
 
+    def action_go_home(self) -> None:
+        """Global binding to always return to Home immediately.
+
+        This is bound to Ctrl+Esc and will clear all pushed screens and show
+        a fresh HomeScreen regardless of current context.
+        """
+        # Pop all screens and push HomeScreen
+        try:
+            while len(self.screen_stack) > 1:
+                self.pop_screen()
+        except Exception:
+            # Ignore errors while popping
+            pass
+        # Push a fresh HomeScreen
+        try:
+            self.push_screen(HomeScreen())
+        except Exception:
+            # If push fails, at least ensure screen stack is trimmed
+            pass
+
     def action_toggle_browser(self) -> None:
         """Toggle the visibility of the file browser pane."""
         # Delegate browser toggle layout
@@ -197,7 +238,13 @@ class wrtr(GlobalKeyHandler, App):
         """
         Cycle the file browser through wrtr folder, favorites, and computer root.
         """
-        self.query_one("#file-browser").cycle_root()
+        fb = self.query_one("#file-browser")
+        fb.cycle_root()
+        # Ensure the file browser receives focus so the user can navigate immediately
+        try:
+            fb.focus()
+        except Exception:
+            pass
 
 
 
@@ -457,10 +504,24 @@ class wrtr(GlobalKeyHandler, App):
     def action_handle_escape(self) -> None:
         """Close markdown preview if open (for any viewer), else go home."""
         focused = self.focused
-        # If focused widget is a markdown preview, restore its editor
-        if hasattr(focused, 'parent') and hasattr(focused.parent, 'toggle_markdown_preview'):
+        # If there's a pushed screen/modal, pop it first (dismiss modal)
+        try:
+            if len(self.screen_stack) > 1:
+                # pop the top-most screen/modal and return to previous view
+                self.pop_screen()
+                return
+        except Exception:
+            # ignore stack issues and continue
+            pass
+
+        # If focused widget is a Markdown preview (viewer), restore its editor
+        from textual.widgets import Markdown as MarkdownViewer
+        # Focus might be the Markdown viewer itself; in that case restore
+        if isinstance(focused, MarkdownViewer) and hasattr(focused, 'parent') and hasattr(focused.parent, 'toggle_markdown_preview'):
             focused.parent.toggle_markdown_preview()
             return
+        # Do not treat TextArea (editor) focus as a preview; avoid toggling preview
+
         # Otherwise, go back to HomeScreen
         self.action_to_home()
 

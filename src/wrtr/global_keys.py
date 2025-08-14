@@ -14,19 +14,29 @@ class GlobalKeyHandler:
             return
 
         if event.key == "escape":
-            # Handle Escape key globally
-            if isinstance(self, Screen) and self.app.screen is not self:
-                self.app.pop_screen()
-                event.stop()
-                return
-
-            if isinstance(self, App):
-                # Check if spellcheck mode is active in the editor
-                if hasattr(self.app, 'editor') and self.app.editor._spellcheck_active:
-                    self.app.editor._exit_spellcheck()
+            # If a modal/screen is pushed on top, pop it first
+            try:
+                if isinstance(self, App) and len(self.screen_stack) > 1:
+                    self.pop_screen()
                     event.stop()
                     return
+                # If we're in a Screen (and not the active one), pop it
+                if isinstance(self, Screen) and self.app.screen is not self:
+                    self.app.pop_screen()
+                    event.stop()
+                    return
+            except Exception:
+                # If popping fails, fall through to other handlers
+                pass
 
-                self.action_to_home()
-                event.stop()
-                return
+            # Handle spellcheck exit if active (App-level)
+            if isinstance(self, App):
+                if hasattr(self, 'editor') and getattr(self.editor, '_spellcheck_active', False):
+                    # Prefer the editor's own exit method if available
+                    exit_fn = getattr(self.editor, '_exit_spellcheck', None)
+                    if callable(exit_fn):
+                        exit_fn()
+                        event.stop()
+                        return
+            # No modal to pop and no spellcheck to exit: let App decide what to do next
+            return
