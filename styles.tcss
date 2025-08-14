@@ -1,0 +1,10 @@
+/* Textual-specific theme styles */
+
+#file-browser {
+    border: tall $border-blurred;
+    padding: 0 2;
+}
+
+#file-browser:focus {
+    border: tall $border;
+}

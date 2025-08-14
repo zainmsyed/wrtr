@@ -46,9 +46,12 @@ class wrtr(GlobalKeyHandler, App):
     Main Textual application class for Terminal Writer.
     """
     # Enable custom CSS for component-class styling
-    # Load custom stylesheet located at project root
+    # Load standard and Textual-specific stylesheets located at project root
     from pathlib import Path
-    CSS_PATH = str(Path(__file__).parent.parent.parent / "styles.css")
+    CSS_PATH = [
+        str(Path(__file__).parent.parent.parent / "styles.css"),
+        str(Path(__file__).parent.parent.parent / "styles.tcss"),
+    ]
     BINDINGS = [
         ("ctrl+f", "show_search", "Search"),
         # ("ctrl+1", "switch_workspace('1')", "Workspace 1"),
