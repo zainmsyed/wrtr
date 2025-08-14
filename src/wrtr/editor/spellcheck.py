@@ -3,28 +3,48 @@ Module: Spellcheck service for MarkdownEditor
 Encapsulates spellcheck activation, deactivation, and display update.
 """
 from pathlib import Path
+from wrtr.logger import logger
 from wrtr.services.spellcheck import MarkdownSpellchecker
 from wrtr.interfaces.spellcheck_service import SpellCheckService
 
 
+import asyncio
+
 def start_spellcheck(editor):
-    """Start spellcheck mode in the editor."""
-    # Lazy-load spellchecker on first use
-    if editor.spellchecker is None:
-        # Lazy-load spellchecker using data inside the app’s wrtr folder
-        app_dir = Path.cwd() / "wrtr"
-        dict_path = app_dir / "data" / "dictionary" / "frequency_dictionary_en_82_765.txt"
-        user_dict = app_dir / "data" / "dictionary" / "user_dictionary.txt"
-        editor.spellchecker = MarkdownSpellchecker(
-            dictionary_path=str(dict_path),
-            user_dictionary_path=str(user_dict)
-        )
+    """Start spellcheck mode in the editor: activate UI then run load & check off main thread."""
+    # Mark active and update UI immediately
     editor._spellcheck_active = True
-    misspelled = editor.spellchecker.check_text(editor.text)
     editor.status_bar.enter_spellcheck_mode()
-    if misspelled:
-        # Delegate display update to module function
+
+    async def _spell_worker():
+        """Background task to load dictionary and run check_text via executor."""
+        loop = asyncio.get_running_loop()
+        # Lazy-load spellchecker off the main thread
+        if editor.spellchecker is None:
+            app_dir = Path.cwd() / "wrtr"
+            dict_path = app_dir / "data" / "dictionary" / "frequency_dictionary_en_82_765.txt"
+            user_dict = app_dir / "data" / "dictionary" / "user_dictionary.txt"
+            editor.spellchecker = await loop.run_in_executor(
+                None,
+                MarkdownSpellchecker,
+                str(dict_path),
+                str(user_dict),
+            )
+        # Perform the check_text in background
+        misspelled = await loop.run_in_executor(
+            None,
+            editor.spellchecker.check_text,
+            editor.text,
+        )
+        # Log number of issues found
+        logger.debug(f"Spellcheck: found {len(misspelled)} issues")
+        # Reset to first misspelled word and update UI
+        if misspelled:
+            editor.spellchecker.current_index = 0
         update_spellcheck_display(editor)
+
+    # Schedule background worker
+    asyncio.create_task(_spell_worker())
 
 
 def exit_spellcheck(editor):
@@ -36,6 +56,7 @@ def exit_spellcheck(editor):
 def update_spellcheck_display(editor):
     """Update status bar and move cursor to current misspelled word."""
     misspelled = editor.spellchecker.misspelled_words
+    logger.debug(f"update_spellcheck_display: spellcheck_mode={editor._spellcheck_active}, misspelled_words={len(misspelled)}")
     if misspelled:
         idx = editor.spellchecker.current_index
         word, suggestions, pos = (
@@ -43,6 +64,7 @@ def update_spellcheck_display(editor):
             [s.term for s in misspelled[idx][1]],
             misspelled[idx][2]
         )
+        logger.debug(f"Current misspelled word: {word}, suggestions: {suggestions}")
         editor.status_bar.set_spellcheck_info(
             word=word,
             suggestions=suggestions,

@@ -18,6 +18,7 @@ class EditorStatusBar(Static):
     file_path: reactive[Path | None] = reactive(None)
     saved: reactive[bool] = reactive(True)
     spellcheck_mode: reactive[bool] = reactive(False)
+    loading: reactive[bool] = reactive(False)
 
     def __init__(self) -> None:
         super().__init__()
@@ -30,6 +31,8 @@ class EditorStatusBar(Static):
         self.current_word: Optional[str] = None
         self.suggestions: List[str] = []
         self.progress: tuple[int, int] = (0, 0)
+        # Loading indicator for spellcheck
+        self.loading = False
 
     def _word_count(self) -> int:
         """Naïve word counter."""
@@ -37,6 +40,10 @@ class EditorStatusBar(Static):
 
     def _render_spellcheck_text(self) -> Panel:
         """Compose the spellcheck status panel."""
+        # If still loading, show a simple indicator
+        if self.loading:
+            from rich.text import Text as _Text
+            return _Text("Checking spelling...", style="italic yellow")
         current, total = self.progress
 
         # Build a table of suggestions
@@ -115,7 +122,9 @@ class EditorStatusBar(Static):
         self.update(self._render_text())
 
     def set_spellcheck_info(self, word: Optional[str], suggestions: List[str], progress: tuple[int, int]):
-        """Update spellcheck information."""
+        """Update spellcheck information and clear loading state."""
+        # Mark loading complete and update info
+        self.loading = False
         self.current_word = word
         self.suggestions = suggestions
         self.progress = progress
@@ -123,8 +132,9 @@ class EditorStatusBar(Static):
             self.update(self._render_text())
 
     def enter_spellcheck_mode(self):
-        """Enter spellcheck mode."""
+        """Enter spellcheck mode and show loading indicator."""
         self.spellcheck_mode = True
+        self.loading = True  # start in loading state
 
     def exit_spellcheck_mode(self):
         """Exit spellcheck mode."""
