@@ -74,11 +74,34 @@ class GlobalSearchScreen(PaletteDismissModal[None]):
         t_matches = process.extract(query, list(self.titles.keys()), scorer=fuzz.token_sort_ratio, limit=10)
         c_matches = process.extract(query, list(self.contents.keys()), scorer=fuzz.partial_ratio, limit=20)
         combined = sorted(t_matches + c_matches, key=lambda x: x[1], reverse=True)[:15]
+        from rich.text import Text
+
+        def _trim_snippet(s: str, max_len: int = 80) -> str:
+            s = s.strip().replace("\n", " ")
+            if len(s) <= max_len:
+                return s
+            return s[: max_len - 1].rstrip() + "…"
+
         for label, score, _ in combined:
             path = self.titles.get(label) or self.contents.get(label)
-            # Show label with its parent path for extra context
-            display = f"{label} — {path.parent}"
-            item = ListItem(Static(display))
+            # Attempt to extract a snippet from content-key format like 'Name:line:content'
+            snippet = ""
+            if label in self.contents:
+                # label is a content key "Filename:line:content"
+                parts = label.split(":", 2)
+                if len(parts) == 3:
+                    snippet = _trim_snippet(parts[2])
+
+            # Build a rich Text object: filename bold, snippet normal, parent path dimmed
+            txt = Text()
+            txt.append(label.split(":", 1)[0], style="bold")
+            if snippet:
+                txt.append("\n")
+                txt.append(snippet)
+            txt.append("\n")
+            txt.append(str(path.parent), style="dim")
+
+            item = ListItem(Static(txt))
             item.path = path
             await results.append(item)
 
