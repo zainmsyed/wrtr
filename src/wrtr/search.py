@@ -4,12 +4,14 @@ Module: Search Pane
 from pathlib import Path
 import asyncio  # run blocking file I/O in background thread
 from rapidfuzz import process, fuzz
+from wrtr.favorite_manager import get as get_favorites
 from textual.widgets import Input, ListView, ListItem, Static
 from textual.containers import Vertical
 from wrtr.modals.palette_dismiss_modal import PaletteDismissModal
 from typing import Iterable
 from textual.widget import Widget
 from textual.events import Key
+from wrtr.services.keybinding_service import KeybindingService
 
 class GlobalSearchScreen(PaletteDismissModal[None]):
     """Global fuzzy search overlay for filenames and contents."""
@@ -47,7 +49,10 @@ class GlobalSearchScreen(PaletteDismissModal[None]):
 
     def __init__(self, placeholder: str = "Search...") -> None:
         super().__init__()
+        # store placeholder text and runtime flags
         self.placeholder = placeholder
+        # Whether to include favorites in the search index (toggleable at runtime)
+        self.include_favorites = True
 
     def compose_modal(self) -> Iterable[Widget]:
         with Vertical(id="search-box"):
@@ -70,10 +75,34 @@ class GlobalSearchScreen(PaletteDismissModal[None]):
         t_matches = process.extract(query, list(self.titles.keys()), scorer=fuzz.token_sort_ratio, limit=10)
         c_matches = process.extract(query, list(self.contents.keys()), scorer=fuzz.partial_ratio, limit=20)
         combined = sorted(t_matches + c_matches, key=lambda x: x[1], reverse=True)[:15]
+        from rich.text import Text
+
+        def _trim_snippet(s: str, max_len: int = 80) -> str:
+            s = s.strip().replace("\n", " ")
+            if len(s) <= max_len:
+                return s
+            return s[: max_len - 1].rstrip() + "…"
+
         for label, score, _ in combined:
             path = self.titles.get(label) or self.contents.get(label)
-            # wrap label string in a Static widget for ListItem
-            item = ListItem(Static(label))
+            # Attempt to extract a snippet from content-key format like 'Name:line:content'
+            snippet = ""
+            if label in self.contents:
+                # label is a content key "Filename:line:content"
+                parts = label.split(":", 2)
+                if len(parts) == 3:
+                    snippet = _trim_snippet(parts[2])
+
+            # Build a rich Text object: filename bold, snippet normal, parent path dimmed
+            txt = Text()
+            txt.append(label.split(":", 1)[0], style="bold")
+            if snippet:
+                txt.append("\n")
+                txt.append(snippet)
+            txt.append("\n")
+            txt.append(str(path.parent), style="dim")
+
+            item = ListItem(Static(txt))
             item.path = path
             await results.append(item)
 
@@ -87,6 +116,24 @@ class GlobalSearchScreen(PaletteDismissModal[None]):
 
     def on_key(self, event: Key) -> None:
         """Intercept keys to manage focus and navigation."""
+        # Support Ctrl+Shift+M: if a search result is selected, dismiss the
+        # overlay and load the file into editor_b via the centralized service.
+        if event.key == "ctrl+shift+m":
+            try:
+                results = self.query_one("#results")
+                idx = results.index
+                if idx is not None and 0 <= idx < len(results.children):
+                    path = results.children[idx].path
+                    # Dismiss modal and schedule the load action asynchronously
+                    self.dismiss(None)
+                    import asyncio
+
+                    asyncio.create_task(KeybindingService.trigger("load_in_editor_b", self.app, path))
+                    event.stop()
+                    return
+            except Exception:
+                # If anything goes wrong, fall through to default handling
+                pass
         if event.key == "escape":
             self.dismiss(None)
             event.stop()
@@ -111,22 +158,47 @@ class GlobalSearchScreen(PaletteDismissModal[None]):
         else:
             super().on_key(event)
 
+    # Favorites are included by default; runtime toggle removed.
+
+    # No runtime rebuild helper required — index builds on mount and includes favorites by default.
+
     def _scan_files(self) -> tuple[dict[str, Path], dict[str, Path]]:
-        """Scan the workspace for .md files and index their names and content lines."""
+        """Scan the workspace for .md files and index their names and content lines.
+
+        Includes files from `wrtr/` and, when enabled, from favorite directories.
+        """
         titles: dict[str, Path] = {}
         contents: dict[str, Path] = {}
-        # Only scan markdown files in the Terminal Writer data directory (wrtr/)
-        data_dir = Path.cwd() / "wrtr"
-        if not data_dir.exists():
-            return {}, {}
-        for file in data_dir.rglob("*.md"):
-            name = file.name
-            titles[name] = file
+
+        def _add_file_to_index(file: Path, source_tag: str) -> None:
             try:
+                base_name = file.name
+                label = base_name if base_name not in titles else f"{base_name} [{source_tag}]"
+                titles[label] = file
                 lines = file.read_text(encoding="utf-8").splitlines()
             except Exception:
-                continue
+                return
             for i, line in enumerate(lines, start=1):
-                key = f"{name}:{i}:{line.strip()}"
-                contents[key] = file
+                key = f"{label}:{i}:{line.strip()}"
+                if key not in contents:
+                    contents[key] = file
+
+        # Scan markdown files in the Terminal Writer data directory (wrtr/)
+        data_dir = Path.cwd() / "wrtr"
+        if data_dir.exists():
+            for file in data_dir.rglob("*.md"):
+                _add_file_to_index(file, "wrtr")
+
+        # Optionally scan favorites
+        if getattr(self, "include_favorites", True):
+            try:
+                fav_dirs = get_favorites()
+            except Exception:
+                fav_dirs = []
+            for fav in fav_dirs:
+                if not fav.exists():
+                    continue
+                for file in fav.rglob("*.md"):
+                    _add_file_to_index(file, "fav")
+
         return titles, contents
