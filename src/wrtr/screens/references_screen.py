@@ -96,8 +96,8 @@ class ReferencesScreen(Screen):
             await self.app.action_open_file(str(path))
             event.stop()
 
-        # Mirror RecentFilesScreen: allow Ctrl+Shift+M to load selected reference
-        if key == "ctrl+shift+m":
+        # Mirror RecentFilesScreen: allow Ctrl+M to load selected reference
+        if key == "ctrl+m":
             try:
                 lv = self.list_view
                 idx = lv.index

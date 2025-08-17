@@ -84,10 +84,11 @@ class RecentFilesScreen(ModalScreen[Path | None]):
             event.stop()
             return
 
-        # If the user pressed Ctrl+Shift+M while the recent-files modal is open,
-        # close the modal and forward the request to the App-level preview
-        # toggler so the preview state can be changed even when a modal is active.
-        if key == "ctrl+shift+m":
+        # If the user pressed Ctrl+M while the recent-files modal is open,
+        # close the modal and forward the request to load the selected file
+        # into the secondary editor (editor_b) using the centralized
+        # KeybindingService.
+        if key == "ctrl+m":
             # If there's a selected item in the ListView, ask the
             # KeybindingService to load it into editor_b. This centralizes
             # the behavior and performs file I/O on a background thread.

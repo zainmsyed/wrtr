@@ -116,9 +116,9 @@ class GlobalSearchScreen(PaletteDismissModal[None]):
 
     def on_key(self, event: Key) -> None:
         """Intercept keys to manage focus and navigation."""
-        # Support Ctrl+Shift+M: if a search result is selected, dismiss the
+        # Support Ctrl+M: if a search result is selected, dismiss the
         # overlay and load the file into editor_b via the centralized service.
-        if event.key == "ctrl+shift+m":
+        if event.key == "ctrl+m":
             try:
                 results = self.query_one("#results")
                 idx = results.index
