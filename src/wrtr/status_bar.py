@@ -53,7 +53,11 @@ class EditorStatusBar(Static):
 
         if self.suggestions:
             for idx, suggestion in enumerate(self.suggestions[:5], start=1):
-                tbl.add_row(f"{idx}.", Text(f"{suggestion} (ctrl+{idx})", style="white"))
+                # Show both the existing Ctrl+N hint and the new Alt+N (capitalization) hint
+                tbl.add_row(
+                    f"{idx}.",
+                    Text(f"{suggestion} (ctrl+{idx} | alt+{idx} → Capitalize)", style="white"),
+                )
         else:
             tbl.add_row("-", Text("(no suggestions)", style="dim"))
 
@@ -62,6 +66,7 @@ class EditorStatusBar(Static):
             f"Misspelled: '{self.current_word}' ({current}/{total})",
             style="bold red",
         )
+
 
         # Navigation and actions hints
         nav_actions = Text.from_markup(

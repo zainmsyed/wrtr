@@ -103,12 +103,35 @@ async def handle_key_event(editor, event: Key) -> None:
                     exit_spellcheck(editor)
             event.stop()
             return
-        # Suggestion keybindings: Ctrl+1 ... Ctrl+5
-        if event.key in ("ctrl+1", "ctrl+2", "ctrl+3", "ctrl+4", "ctrl+5"):
-            idx = int(event.key.split('+')[-1]) - 1
+        # Suggestion keybindings: Ctrl+1 ... Ctrl+5 (normal)
+        # Use Alt+1..5 (or alt+symbol variants) as the sole capitalization trigger.
+        suggestion_keys = ("ctrl+1", "ctrl+2", "ctrl+3", "ctrl+4", "ctrl+5")
+        alt_keys = ("alt+1", "alt+2", "alt+3", "alt+4", "alt+5")
+        # Some terminals send alt with the shifted symbol instead of the number key
+        alt_symbol_map = {
+            "alt+!": 0,
+            "alt+@": 1,
+            "alt+#": 2,
+            "alt+$": 3,
+            "alt+%": 4,
+        }
+
+        if event.key in suggestion_keys or event.key in alt_keys or event.key in alt_symbol_map:
+            capitalize = False
+            if event.key in suggestion_keys:
+                idx = int(event.key.split('+')[-1]) - 1
+            elif event.key in alt_keys:
+                idx = int(event.key.split('+')[-1]) - 1
+                capitalize = True
+            else:
+                idx = alt_symbol_map.get(event.key)
+                capitalize = True
+
             current = editor.spellchecker.get_current_word()
-            if current and idx < len(current[1]):
+            if current and idx is not None and idx < len(current[1]):
                 suggestion = current[1][idx].term
+                if capitalize and suggestion:
+                    suggestion = suggestion[0].upper() + suggestion[1:]
                 word, _, pos = current
                 word_start = pos
                 word_end = pos + len(word)

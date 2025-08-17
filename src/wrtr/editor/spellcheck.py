@@ -4,7 +4,7 @@ Encapsulates spellcheck activation, deactivation, and display update.
 """
 from pathlib import Path
 from wrtr.logger import logger
-from wrtr.services.spellcheck import MarkdownSpellchecker
+from wrtr.services.spellcheck_service import get_spellchecker
 from wrtr.interfaces.spellcheck_service import SpellCheckService
 
 
@@ -19,17 +19,11 @@ def start_spellcheck(editor):
     async def _spell_worker():
         """Background task to load dictionary and run check_text via executor."""
         loop = asyncio.get_running_loop()
-        # Lazy-load spellchecker off the main thread
+        
+        # Get singleton spellchecker (lazy-loaded and cached)
         if editor.spellchecker is None:
-            app_dir = Path.cwd() / "wrtr"
-            dict_path = app_dir / "data" / "dictionary" / "frequency_dictionary_en_82_765.txt"
-            user_dict = app_dir / "data" / "dictionary" / "user_dictionary.txt"
-            editor.spellchecker = await loop.run_in_executor(
-                None,
-                MarkdownSpellchecker,
-                str(dict_path),
-                str(user_dict),
-            )
+            editor.spellchecker = await get_spellchecker()
+        
         # Perform the check_text in background
         misspelled = await loop.run_in_executor(
             None,

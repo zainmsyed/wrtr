@@ -1,9 +1,9 @@
 from pathlib import Path
-from textual.widgets import ListView, ListItem, Label
+from textual.widgets import ListView, ListItem, Label, Static
 from textual.screen import ModalScreen
 from wrtr.services.recent_files_service import RecentFilesService
 from wrtr.services.keybinding_service import KeybindingService
-from textual.containers import Center, Vertical
+from textual.containers import Vertical
 from textual.events import Key
 
 class RecentFilesScreen(ModalScreen[Path | None]):
@@ -31,6 +31,7 @@ class RecentFilesScreen(ModalScreen[Path | None]):
     }
     #recent-box ListItem {
         margin-bottom: 1;
+        padding: 0 1; /* horizontal padding to match search/results spacing */
     }
     """
 
@@ -38,13 +39,21 @@ class RecentFilesScreen(ModalScreen[Path | None]):
         """Build the list of up to MAX recent files."""
         items = []
         # Use get_recent to fetch up to MAX valid paths
+        from rich.text import Text
+
+        def _trim(s: str, max_len: int = 80) -> str:
+            s = s.strip().replace("\n", " ")
+            return s if len(s) <= max_len else s[: max_len - 1].rstrip() + "…"
+
         for p in RecentFilesService.get_recent():
-            items.append(
-                ListItem(
-                    Label(str(p), classes="recent-item"),
-                    name=str(p),
-                )
-            )
+            txt = Text()
+            txt.append(p.name, style="bold")
+            txt.append("\n")
+            txt.append(str(p.parent), style="dim")
+            item = ListItem(Static(txt))
+            # mirror Search/References: attach path for selection logic
+            item.path = p
+            items.append(item)
         if not items:
             items.append(ListItem(Label("No recent files", classes="dim")))
         yield Vertical(
@@ -65,7 +74,12 @@ class RecentFilesScreen(ModalScreen[Path | None]):
             self._previous_focus = None
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
-        if event.item.name:
+        # Prefer the attached Path object; fall back to name if present
+        path = getattr(event.item, "path", None)
+        if path:
+            self.dismiss(Path(path))
+            return
+        if getattr(event.item, "name", None):
             self.dismiss(Path(event.item.name))
 
     async def on_key(self, event: Key) -> None:
@@ -84,10 +98,11 @@ class RecentFilesScreen(ModalScreen[Path | None]):
             event.stop()
             return
 
-        # If the user pressed Ctrl+Shift+M while the recent-files modal is open,
-        # close the modal and forward the request to the App-level preview
-        # toggler so the preview state can be changed even when a modal is active.
-        if key == "ctrl+shift+m":
+        # If the user pressed Ctrl+M while the recent-files modal is open,
+        # close the modal and forward the request to load the selected file
+        # into the secondary editor (editor_b) using the centralized
+        # KeybindingService.
+        if key == "ctrl+m":
             # If there's a selected item in the ListView, ask the
             # KeybindingService to load it into editor_b. This centralizes
             # the behavior and performs file I/O on a background thread.
@@ -96,12 +111,21 @@ class RecentFilesScreen(ModalScreen[Path | None]):
                 idx = lv.index
                 if idx is not None and 0 <= idx < len(lv.children):
                     item = lv.children[idx]
-                    name = getattr(item, "name", None)
-                    if name:
-                        path = Path(name)
+                    # Prefer the attached Path set on the item; fall back to name
+                    path_obj = getattr(item, "path", None)
+                    if path_obj:
+                        # Ensure it's a Path instance
+                        path = Path(path_obj) if not isinstance(path_obj, Path) else path_obj
                         # Close modal before manipulating editors
                         self.dismiss(None)
                         # Trigger the registered action (async)
+                        await KeybindingService.trigger("load_in_editor_b", self.app, path)
+                        event.stop()
+                        return
+                    name = getattr(item, "name", None)
+                    if name:
+                        path = Path(name)
+                        self.dismiss(None)
                         await KeybindingService.trigger("load_in_editor_b", self.app, path)
                         event.stop()
                         return
