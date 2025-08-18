@@ -2,6 +2,15 @@
 
 A terminal-based writing application built with the Textual Python framework. Terminal Writer provides a clean, distraction-free writing environment with dual-pane markdown editing, file management, and workspace organization.
 
+## Screenshots
+
+Here are some screenshots of the application in action:
+
+1. ![Screenshot From 2025-08-18 15-37-25](screenshots/Screenshot%20From%202025-08-18%2015-37-25.png)
+2. ![Screenshot From 2025-08-18 17-58-45](screenshots/Screenshot%20From%202025-08-18%2017-58-45.png)
+3. ![Screenshot From 2025-08-18 18-01-23](screenshots/Screenshot%20From%202025-08-18%2018-01-23.png)
+4. ![Screenshot From 2025-08-18 18-03-48](screenshots/Screenshot%20From%202025-08-18%2018-03-48.png)
+
 ## Quick Start
 
 ### Install UV
