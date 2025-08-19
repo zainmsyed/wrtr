@@ -5,6 +5,42 @@ with custom theming for link-like tokens.
 from rich.style import Style
 from textual.widgets import TextArea
 from textual.widgets.text_area import TextAreaTheme
+from textual.events import Key
+
+
+class ForwardingTextArea(TextArea):
+    """TextArea subclass that forwards unhandled Key events to its parent.
+
+    This lets the owning `MarkdownEditor` receive Enter and other keys even
+    if the TextArea didn't fully handle them.
+    """
+    async def on_key(self, event: Key) -> None:  # type: ignore[override]
+        # Let the normal TextArea processing run first
+        try:
+            await super().on_key(event)
+        except Exception:
+            # Some Textual versions may not implement async super().on_key
+            try:
+                super().on_key(event)
+            except Exception:
+                pass
+
+        handled = getattr(event, 'handled', None)
+        if handled is None:
+            handled = getattr(event, '_handled', False)
+
+        # If not handled, forward to parent editor if it exposes on_key
+        if not handled:
+            parent = getattr(self, 'parent', None)
+            # climb up until an ancestor with on_key is found
+            while parent is not None and not hasattr(parent, 'on_key'):
+                parent = getattr(parent, 'parent', None)
+            if parent is not None and hasattr(parent, 'on_key'):
+                try:
+                    await parent.on_key(event)
+                except Exception:
+                    # ignore errors during forwarding to avoid breaking typing
+                    pass
 
 
 def make_markdown_text_area(initial_text: str = "", language: str | None = "markdown") -> TextArea:
@@ -14,7 +50,7 @@ def make_markdown_text_area(initial_text: str = "", language: str | None = "mark
     - Registers a small custom theme that colors links/wiki-links blue.
     - Keeps standard soft-wrap behavior suitable for writing.
     """
-    ta = TextArea(text=initial_text, language=language or "markdown")
+    ta = ForwardingTextArea(text=initial_text, language=language or "markdown")
 
     # Build a lightweight theme that maps link-ish captures to blue
     # Token names come from the markdown highlight query. We include a few

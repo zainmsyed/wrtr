@@ -7,9 +7,92 @@ from wrtr.logger import logger
 from pathlib import Path
 import re
 from .spellcheck import start_spellcheck, exit_spellcheck, update_spellcheck_display
+from .slash_detection import SlashCommandDetector
+from wrtr.services.slash_command_service import SlashCommandService
+
+async def process_slash_command(editor, event: Key) -> bool:
+    """Process slash commands on Enter key"""
+    if event.key != "enter":
+        return False
+
+    # Get current cursor position and document text (buffer is authoritative)
+    row, col = editor.text_area.cursor_location
+    if hasattr(editor.text_area, 'text') and getattr(editor.text_area, 'text') is not None:
+        text = editor.text_area.text
+    else:
+        text = editor.buffer.get_text()
+
+    lines = text.splitlines()
+    if row >= len(lines):
+        return False
+    line = lines[row]
+
+    # Parse the full line for a slash command and its args
+    parsed = SlashCommandService.parse(line)
+    if not parsed:
+        return False
+    command, args = parsed
+
+    # Compute the command span (start_col .. end_col) to replace
+    leading = re.match(r'^(\s*)', line).group(1)
+    start_col = len(leading)
+
+    # Handle dynamic multi-word date commands which occupy the whole phrase
+    # e.g. '/next week', '/next month', '/4 days from today'
+    if command == 'next' and args.lower() in ('week', 'month'):
+        end_col = start_col + len(line.strip())
+    elif re.match(r'^/\d+\s+days\s+from\s+today$', line.strip(), flags=re.IGNORECASE):
+        end_col = start_col + len(line.strip())
+    else:
+        # For normal commands, replace only the command token and a single
+        # following space (so '/today y' -> replace '/today ' and keep 'y')
+        base = f"/{command}"
+        end_col = start_col + len(base)
+        # include one trailing space if present
+        if len(line) > end_col and line[end_col] == ' ':
+            end_col += 1
+
+    # Only trigger when cursor is at or after the end of the command span
+    if col < end_col:
+        return False
+
+    # Execute handler using the full line so handlers that expect args work
+    replacement = await SlashCommandService.execute(line)
+    if not replacement or replacement == line or replacement.startswith("Unknown command"):
+        return False
+
+    # Replace only the command span; preserve the rest of the line
+    start_pos = (row, start_col)
+    end_pos = (row, end_col)
+    editor.view.replace_range(start_pos, end_pos, replacement)
+
+    # Sync buffer if TextArea exposes its text; tests' DummyView updates buffer directly
+    if hasattr(editor.text_area, 'text') and getattr(editor.text_area, 'text') is not None:
+        try:
+            editor.buffer.set_text(editor.text_area.text)
+        except Exception:
+            pass
+
+    # Move cursor after the replacement (keep it on same logical spot relative to replaced content)
+    rep_lines = replacement.splitlines()
+    if len(rep_lines) == 1:
+        new_col = start_col + len(rep_lines[0])
+        editor.view.move_cursor(row, new_col)
+    else:
+        new_row = row + len(rep_lines) - 1
+        new_col = len(rep_lines[-1])
+        editor.view.move_cursor(new_row, new_col)
+
+    return True
 
 async def handle_key_event(editor, event: Key) -> None:
     """Handle key events for the MarkdownEditor."""
+    # Slash commands take priority
+    if await process_slash_command(editor, event):
+        if hasattr(event, 'stop') and callable(getattr(event, 'stop')):
+            event.stop()
+        return
+
     # Exit markdown preview on Escape
     if hasattr(editor, 'markdown_viewer') and event.key == "escape":
         editor.restore_text_area()
