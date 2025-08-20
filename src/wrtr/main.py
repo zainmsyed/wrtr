@@ -125,6 +125,15 @@ class wrtr(GlobalKeyHandler, App):
             # Non-fatal: app can still run without seeded dictionaries
             pass
 
+        # Ensure templates directory exists and initialize defaults
+        try:
+            from wrtr.services.template_service import TemplateService
+            ts = TemplateService(self.DEFAULT_DIR)
+            ts.initialize_default_templates()
+        except Exception:
+            # Non-fatal: continue even if template initialization fails
+            pass
+
         # Copy seed documents if they exist
         if self.SEED_DIR.exists():
             for md_file in self.SEED_DIR.glob("*.md"):
