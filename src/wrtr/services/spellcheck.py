@@ -1,51 +1,127 @@
 import importlib.resources
 import re
+from pathlib import Path
 from typing import List, Tuple, Optional
 from symspellpy import SymSpell, Verbosity
 from wrtr.interfaces.spellcheck_service import SpellCheckService
 
-class SimpleSpellchecker(SpellCheckService):
-    """Basic SymSpell-based spell checker."""
-    # Implements SpellCheckService protocol
 
+class DictionaryLoader:
+    """Utility class for loading SymSpell dictionaries."""
+    
+    @staticmethod
+    def load_frequency_dictionary(symspell: SymSpell, dictionary_path: str | None = None) -> None:
+        """Load frequency dictionary into SymSpell instance."""
+        if dictionary_path:
+            try:
+                symspell.load_dictionary(str(dictionary_path), term_index=0, count_index=1)
+                return
+            except Exception:
+                # Fallback to built-in if custom dictionary fails
+                pass
+        
+        # Load built-in frequency dictionary
+        with importlib.resources.path("symspellpy", "frequency_dictionary_en_82_765.txt") as dict_path_res:
+            symspell.load_dictionary(str(dict_path_res), term_index=0, count_index=1)
+    
+    @staticmethod
+    def load_bigram_dictionary(symspell: SymSpell, bigram_dictionary_path: str | None = None) -> None:
+        """Load bigram dictionary into SymSpell instance (optional)."""
+        try:
+            if bigram_dictionary_path:
+                symspell.load_bigram_dictionary(str(bigram_dictionary_path), term_index=0, count_index=2)
+            else:
+                # Load built-in bigram dictionary
+                with importlib.resources.path("symspellpy", "frequency_bigramdictionary_en_243_342.txt") as bigram_path_res:
+                    symspell.load_bigram_dictionary(str(bigram_path_res), term_index=0, count_index=2)
+        except Exception:
+            # If bigram loading fails, continue without it
+            pass
+
+
+class UserDictionary:
+    """Utility class for managing user dictionary files."""
+    
+    def __init__(self, user_dictionary_path: str | None = None):
+        if user_dictionary_path:
+            self.path = Path(user_dictionary_path)
+        else:
+            self.path = Path.cwd() / "wrtr" / "data" / "dictionary" / "user_dictionary.txt"
+        
+        # Ensure directory exists and file is present
+        try:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            if not self.path.exists():
+                self.path.write_text("", encoding="utf-8")
+        except Exception:
+            pass
+    
+    def load_terms(self) -> set[str]:
+        """Load user dictionary terms from file."""
+        terms = set()
+        try:
+            with open(self.path, 'r', encoding='utf-8') as uf:
+                for line in uf:
+                    parts = line.strip().split()
+                    if parts:
+                        terms.add(parts[0].lower())
+        except Exception:
+            pass
+        return terms
+    
+    def add_term(self, term: str) -> None:
+        """Add a term to the user dictionary file."""
+        term = term.lower()
+        try:
+            with open(self.path, 'a', encoding='utf-8') as uf:
+                uf.write(f"{term}\n")
+        except Exception:
+            pass
+    
+    def add_terms_to_symspell(self, symspell: SymSpell, terms: set[str]) -> None:
+        """Add terms to SymSpell dictionary to prevent flagging."""
+        for term in terms:
+            try:
+                symspell.create_dictionary_entry(term, 1)
+            except Exception:
+                pass
+
+
+class MarkdownSpellchecker(SpellCheckService):
+    """Markdown-aware spell checker with user dictionary support."""
+    
     def __init__(
         self,
-        max_dictionary_edit_distance: int = 2,  # Set to 2 for accurate lookups
-        prefix_length: int = 7,  # Restored for accuracy
         dictionary_path: str | None = None,
-        bigram_dictionary_path: str | None = None,
+        user_dictionary_path: str | None = None,
+        max_dictionary_edit_distance: int = 2,
+        prefix_length: int = 7,
         load_bigrams: bool = False,  # Skip bigrams by default for performance
     ):
+        # Initialize SymSpell
         self.symspell = SymSpell(
             max_dictionary_edit_distance=max_dictionary_edit_distance,
             prefix_length=prefix_length,
         )
         
-        # Load custom dictionary first if provided, otherwise use built-in
-        if dictionary_path:
-            try:
-                self.symspell.load_dictionary(str(dictionary_path), term_index=0, count_index=1)
-            except Exception:
-                # Fallback to built-in if custom dictionary fails
-                with importlib.resources.path("symspellpy", "frequency_dictionary_en_82_765.txt") as dict_path_res:
-                    self.symspell.load_dictionary(str(dict_path_res), term_index=0, count_index=1)
-        else:
-            # Load built-in frequency dictionary
-            with importlib.resources.path("symspellpy", "frequency_dictionary_en_82_765.txt") as dict_path_res:
-                self.symspell.load_dictionary(str(dict_path_res), term_index=0, count_index=1)
-
-        # Bigram is optional and significantly slows down loading; skip by default
+        # Load frequency dictionary
+        DictionaryLoader.load_frequency_dictionary(self.symspell, dictionary_path)
+        
+        # Load bigrams if requested (optional for performance)
         if load_bigrams:
-            try:
-                if bigram_dictionary_path:
-                    self.symspell.load_bigram_dictionary(str(bigram_dictionary_path), term_index=0, count_index=2)
-                else:
-                    # Load built-in bigram dictionary
-                    with importlib.resources.path("symspellpy", "frequency_bigramdictionary_en_243_342.txt") as bigram_path_res:
-                        self.symspell.load_bigram_dictionary(str(bigram_path_res), term_index=0, count_index=2)
-            except Exception:
-                # If bigram loading fails, continue without it
-                pass
+            DictionaryLoader.load_bigram_dictionary(self.symspell)
+        
+        # Set up user dictionary
+        self.user_dictionary = UserDictionary(user_dictionary_path)
+        self.user_terms = self.user_dictionary.load_terms()
+        self.user_dictionary.add_terms_to_symspell(self.symspell, self.user_terms)
+        
+        # Per-session ignored terms (skip all further occurrences)
+        self.ignored_terms: set[str] = set()
+        
+        # State for tracking misspelled words
+        self.misspelled_words: list[tuple[str, list, int]] = []
+        self.current_index: int = -1
 
     def correct_word(self, word: str) -> str:
         """
@@ -58,7 +134,7 @@ class SimpleSpellchecker(SpellCheckService):
             str: The top correction, or the original word if no suggestions.
         """
         suggestions = self.symspell.lookup(word, Verbosity.TOP,
-                                          max_edit_distance=2,  # Restored for accuracy
+                                          max_edit_distance=2,
                                           include_unknown=True)
         return suggestions[0].term if suggestions else word
 
@@ -74,77 +150,6 @@ class SimpleSpellchecker(SpellCheckService):
         """
         return " ".join(self.correct_word(w) for w in text.split())
 
-    def add_to_dictionary(self, word: str) -> None:
-        """Add a word to the SymSpell dictionary to prevent future flagging."""
-        # Create a new entry with count=1; treat as input term
-        try:
-            self.symspell.create_dictionary_entry(word, 1)
-        except Exception:
-            pass
-
-
-class MarkdownSpellchecker(SimpleSpellchecker):
-    """Backward-compatible alias for the old MarkdownSpellchecker interface with basic check_text support."""
-    def __init__(
-        self,
-        dictionary_path: str | None = None,
-        user_dictionary_path: str | None = None,
-        max_dictionary_edit_distance: int = 2,
-        prefix_length: int = 7,
-    ):
-        from pathlib import Path
-
-        # Don't copy large dictionaries automatically to improve performance
-        # The custom dictionary_path should only be used if the user specifically
-        # wants a different frequency dictionary
-        
-        # Initialize SymSpell with either provided or built-in dictionaries
-        super().__init__(
-            max_dictionary_edit_distance=max_dictionary_edit_distance,
-            prefix_length=prefix_length,
-            dictionary_path=dictionary_path,  # Pass through as-is
-        )
-
-        self.user_terms: set[str] = set()
-        # Per-session ignored terms (skip all further occurrences)
-        self.ignored_terms: set[str] = set()
-
-        # Resolve user dictionary path (default to CWD/wrtr/data/dictionary)
-        if user_dictionary_path:
-            self.user_dictionary_path = user_dictionary_path
-        else:
-            self.user_dictionary_path = str(
-                Path.cwd() / "wrtr" / "data" / "dictionary" / "user_dictionary.txt"
-            )
-
-        # Ensure directory exists and file is present
-        try:
-            udp = Path(self.user_dictionary_path)
-            udp.parent.mkdir(parents=True, exist_ok=True)
-            if not udp.exists():
-                udp.write_text("", encoding="utf-8")
-        except Exception:
-            pass
-
-        # Load initial user dictionary terms
-        try:
-            with open(self.user_dictionary_path, 'r', encoding='utf-8') as uf:
-                for line in uf:
-                    parts = line.strip().split()
-                    if not parts:
-                        continue
-                    term = parts[0].lower()
-                    self.user_terms.add(term)
-                    # Also add to symspell dictionary to prevent flagging
-                    try:
-                        self.symspell.create_dictionary_entry(term, 1)
-                    except Exception:
-                        pass
-        except Exception:
-            pass
-        self.misspelled_words: list[tuple[str, list, int]] = []
-        self.current_index: int = -1
-
     def check_text(self, text: str) -> List[Tuple[str, List, int]]:
         """
         Analyze text and return details on misspelled words.
@@ -156,19 +161,8 @@ class MarkdownSpellchecker(SimpleSpellchecker):
             List[Tuple[str, List, int]]: A list of tuples (word, suggestions, position).
         """
         # Reload user dictionary terms each pass to ensure skips are up-to-date
-        if getattr(self, 'user_dictionary_path', None):
-            try:
-                terms = set()
-                with open(self.user_dictionary_path, 'r', encoding='utf-8') as uf:
-                    for line in uf:
-                        parts = line.strip().split()
-                        if parts:
-                            terms.add(parts[0].lower())
-                self.user_terms = terms
-                for term in self.user_terms:
-                    self.symspell.create_dictionary_entry(term, 1)
-            except Exception:
-                pass
+        self.user_terms = self.user_dictionary.load_terms()
+        self.user_dictionary.add_terms_to_symspell(self.symspell, self.user_terms)
 
         self.misspelled_words = []
         # Normalize smart apostrophes to ASCII
@@ -233,21 +227,18 @@ class MarkdownSpellchecker(SimpleSpellchecker):
 
     def add_to_dictionary(self, word: str) -> None:
         """Add a word to both SymSpell and the user dictionary file."""
-        # add to symspell and in-memory set
+        term = word.lower()
+        
+        # Add to SymSpell dictionary
         try:
-            super().add_to_dictionary(word)
+            self.symspell.create_dictionary_entry(term, 1)
         except Exception:
             pass
-        term = word.lower()
+        
+        # Add to user dictionary if not already present
         if term not in self.user_terms:
             self.user_terms.add(term)
-            # persist to user dictionary file
-            if getattr(self, 'user_dictionary_path', None):
-                try:
-                    with open(self.user_dictionary_path, 'a', encoding='utf-8') as uf:
-                        uf.write(f"{term}\n")
-                except Exception:
-                    pass
+            self.user_dictionary.add_term(term)
 
     def get_current_word(self) -> Optional[Tuple[str, List, int]]:
         """

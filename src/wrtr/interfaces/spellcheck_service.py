@@ -1,8 +1,9 @@
 """
 Protocol definitions for spellcheck service.
 """
-from typing import Protocol, List, Tuple, Optional
+from typing import Protocol, List, Tuple, Optional, runtime_checkable
 
+@runtime_checkable
 class SpellCheckService(Protocol):
     """Defines the interface for a spell-checking service."""
     def check_text(self, text: str) -> List[Tuple[str, List, int]]:
