@@ -1,8 +1,6 @@
 from pathlib import Path
 from typing import Iterable
-from textual.screen import ModalScreen
-from textual.containers import Center, Middle, Vertical, Horizontal
-from textual.widgets import Input, Button, Label
+from wrtr.modals.common import ModalScreen, Center, Middle, Vertical, Horizontal, Input, Button, Label, Key
 from textual import events
 from wrtr.modals.modal_base import EscModal
 

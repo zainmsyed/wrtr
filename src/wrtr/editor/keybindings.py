@@ -7,7 +7,6 @@ from wrtr.logger import logger
 from pathlib import Path
 import re
 from .spellcheck import start_spellcheck, exit_spellcheck, update_spellcheck_display
-from .slash_detection import SlashCommandDetector
 from wrtr.services.slash_command_service import SlashCommandService
 
 async def process_slash_command(editor, event: Key) -> bool:
