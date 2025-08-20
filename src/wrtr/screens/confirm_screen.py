@@ -15,11 +15,11 @@ class ConfirmScreen(EscModal, ModalScreen[bool]):
     def compose(self) -> Iterable:
         with Center():
             with Middle():
-                with Vertical(id="dialog", classes="dialog-box-small"):
+                with Vertical(id="dialog", classes="dialog-box"):
                     yield Label(self.question, id="question", classes="modal-question")
-                    with Horizontal(id="buttons", classes="button-row"):
+                    with Horizontal(id="buttons", classes="button-row-full"):
                         yield Button("Yes (y)", id="yes")
-                        yield Button("No (n)",  id="no")
+                        yield Button("No (n)", id="no")
 
     def on_key(self, event: events.Key) -> None:
         if event.key == "y":

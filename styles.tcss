@@ -25,12 +25,28 @@
 /* Smaller dialog box for simple confirmations */
 .dialog-box-small {
     width: auto;
-    max-width: 60;
+    /* Increase width to accommodate multiple buttons */
+    max-width: 70;
     height: auto;
     background: $background;
     color: $text;
     border: tall $background;
     padding: 1 2;
+    /* Center contents and text for confirm dialogs */
+    content-align: center middle;
+    text-align: center;
+}
+/* Center content for confirm dialog */
+/* Confirm dialog container centering */
+#dialog {
+    /* Center children horizontally and vertically */
+    content-align: center middle;
+    /* Center text inside labels and buttons */
+    text-align: center;
+    /* Ensure container is wide enough for Yes/No buttons */
+    min-width: 50;
+    /* Ensure container is wide enough for Yes/No buttons */
+    min-width: 60;
 }
 
 /* Large dialog box for complex forms */
@@ -54,6 +70,8 @@
 .button-row {
     width: auto;
     height: auto;
+    /* Center buttons horizontally and vertically */
+    content-align: center middle;
 }
 
 .button-row Button {
