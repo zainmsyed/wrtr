@@ -3,37 +3,18 @@ from textual.widgets import ListView, ListItem, Label, Static
 from textual.screen import ModalScreen
 from wrtr.services.recent_files_service import RecentFilesService
 from wrtr.services.keybinding_service import KeybindingService
-from textual.containers import Vertical
+from textual.containers import Vertical, Center, Middle
 from textual.events import Key
 
 class RecentFilesScreen(ModalScreen[Path | None]):
     """Modal that shows ≤ 5 recent files."""
 
     BINDINGS = [("escape", "dismiss(None)")]
-    CSS = """
-    RecentFilesScreen {
-        align: center middle;      /* center the modal */
-        border: none;              /* remove border */
-        outline: none;             /* remove outline */
-    }
 
-    #recent-box {
-        width: 100;                /* increase width */
-        height: auto;
-        max-height: 30;
-    }
-
-    #recent-box ListView {
-        width: 100%;
-        height: auto;
-        max-height: 25;
-        padding: 2;                /* add padding to the file list */
-    }
-    #recent-box ListItem {
-        margin-bottom: 1;
-        padding: 0 1; /* horizontal padding to match search/results spacing */
-    }
-    """
+    def __init__(self) -> None:
+        super().__init__()
+        # Apply modal screen styling
+        self.add_class("modal-screen")
 
     def compose(self):
         """Build the list of up to MAX recent files."""
@@ -56,10 +37,14 @@ class RecentFilesScreen(ModalScreen[Path | None]):
             items.append(item)
         if not items:
             items.append(ListItem(Label("No recent files", classes="dim")))
-        yield Vertical(
-            ListView(*items, id="recent_list"),
-            id="recent-box"
-        )
+        
+        with Center():
+            with Middle():
+                yield Vertical(
+                    ListView(*items, id="recent_list"),
+                    id="recent-box",
+                    classes="dialog-box-large"
+                )
 
     def on_mount(self) -> None:
         """Remember the widget that had focus before the modal was shown.

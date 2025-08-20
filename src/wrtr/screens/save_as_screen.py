@@ -9,48 +9,6 @@ from wrtr.modals.modal_base import EscModal
 class SaveAsScreen(EscModal, ModalScreen[Path | None]):
     """Save-as or create-folder dialog with optional directory browser."""
 
-    CSS = """
-    SaveAsScreen { align: center middle; }
-
-    #save-box {
-        width: auto;
-        max-width: 70;
-        height: auto;
-        background: $background; /* Match the main background color */
-        color: $text;
-        border: tall $background; /* Blend border with background */
-        padding: 1 2;
-    }
-
-    #breadcrumb { margin-bottom: 1; }
-    #filename_input { width: 100%; margin-bottom: 1; text-align: left; }
-
-    #buttons {
-        width: 100%;
-        height: auto;
-    }
-    #buttons Button {
-    width: 1fr;          /* Fill available space equally */
-        margin-right: 1;
-    }
-    #buttons Button:last-of-type { margin-right: 0; }
-
-    /* Browse dropdown toggle */
-    .browse-btn {
-        width: 100%; /* full width toggle */
-        margin-top: 1; /* space above */
-        text-align: left;
-    }
-
-    #tree {
-        display: none;
-        height: 15;
-        width: 100%;
-    margin-top: 1;
-        overflow-y: auto;
-    }
-    """
-
     def __init__(
         self,
         default_filename: str = "untitled.md",
@@ -66,19 +24,22 @@ class SaveAsScreen(EscModal, ModalScreen[Path | None]):
         if add_extension and not Path(default_filename).suffix:
             default_filename = f"{default_filename}.md"
         self.filename = default_filename
+        # Apply modal screen styling
+        self.add_class("modal-screen")
 
     def compose(self) -> Iterable:
         with Center():
             with Middle():
-                with Vertical(id="save-box"):
-                    yield Label(f"{self.title} in {self.current_dir}", id="breadcrumb")
+                with Vertical(id="save-box", classes="dialog-box"):
+                    yield Label(f"{self.title} in {self.current_dir}", id="breadcrumb", classes="modal-question")
                     yield Input(
                         value=self.filename,
                         placeholder="File name",
-                        id="filename_input"
+                        id="filename_input",
+                        classes="modal-input"
                     )
                     # Main buttons: Save and Cancel only
-                    with Horizontal(id="buttons"):
+                    with Horizontal(id="buttons", classes="button-row-full"):
                         yield Button("Save (Ctrl+s)", id="save")
                         yield Button("Cancel (Ctrl+c)", id="cancel")
 

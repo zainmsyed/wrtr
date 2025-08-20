@@ -9,55 +9,30 @@ from wrtr.modals.modal_base import EscModal
 class RenameScreen(EscModal, ModalScreen[str | None]):
     """Modal to rename a file or folder."""
 
-    CSS = """
-    RenameScreen { align: center middle; }
-
-    #rename-box {
-        width: auto;
-        max-width: 70;
-        height: auto;
-        background: $background; /* Match the main background color */
-        color: $text;
-        border: tall $background; /* Blend border with background */
-        padding: 1 2;
-    }
-
-    #breadcrumb { margin-bottom: 1; }
-    #filename_input { width: 100%; margin-bottom: 1; }
-
-    #buttons {
-        width: 100%;
-        height: auto;
-    }
-    #buttons Button {
-        width: 1fr;
-        margin-right: 1;
-    }
-    #buttons Button:last-of-type {
-        margin-right: 0;
-    }
-    """
-
     def __init__(self, old_path: Path) -> None:
         super().__init__()
         self.old_path = old_path
         self.current_dir = old_path.parent
         self.filename = old_path.name
+        # Apply modal screen styling
+        self.add_class("modal-screen")
 
     def compose(self) -> Iterable:
         with Center():
             with Middle():
-                with Vertical(id="rename-box"):
+                with Vertical(id="rename-box", classes="dialog-box"):
                     yield Label(
                         f"Rename {self.old_path.name} in {self.current_dir}",
-                        id="breadcrumb"
+                        id="breadcrumb",
+                        classes="modal-question"
                     )
                     yield Input(
                         value=self.filename,
                         placeholder="New name",
-                        id="filename_input"
+                        id="filename_input",
+                        classes="modal-input"
                     )
-                    with Horizontal(id="buttons"):
+                    with Horizontal(id="buttons", classes="button-row-full"):
                         yield Button("Rename (Ctrl+r)", id="rename")
                         yield Button("Cancel (Ctrl+c)", id="cancel")
 

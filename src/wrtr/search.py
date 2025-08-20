@@ -16,35 +16,6 @@ from wrtr.services.keybinding_service import KeybindingService
 class GlobalSearchScreen(PaletteDismissModal[None]):
     """Global fuzzy search overlay for filenames and contents."""
 
-    DEFAULT_CSS = """
-    GlobalSearchScreen {
-        align: center middle;      /* center the overlay itself */
-        border: none;              /* remove border around GlobalSearchScreen */
-        outline: none;             /* remove outline around GlobalSearchScreen */
-    }
-
-    #search-box {
-        width: 80;                 /* fixed width (≈ 80 cols) */
-        height: auto;
-        max-height: 25;
-    }
-
-    #search-box Input {
-        width: 100%;
-        margin-bottom: 1;
-    }
-
-    #search-box #results {
-        width: 100%;
-        height: auto;
-        max-height: 20;
-    }
-    #search-box #results ListItem {
-        margin-bottom: 1;
-        padding: 0 1;
-    }
-    """
-
     # Escape will dismiss with default None via PaletteDismissModal
 
     def __init__(self, placeholder: str = "Search...") -> None:
@@ -53,11 +24,19 @@ class GlobalSearchScreen(PaletteDismissModal[None]):
         self.placeholder = placeholder
         # Whether to include favorites in the search index (toggleable at runtime)
         self.include_favorites = True
+        # Note: PaletteModal handles centering, but we need to customize the dialog box for search
+
+    def compose(self) -> Iterable[Widget]:
+        # Override PaletteModal.compose to customize dialog box for search
+        with Vertical(id="dialog", classes="dialog-box search-dialog"):
+            if self.title:
+                yield Static(self.title, classes="modal-title")
+            # yield search contents
+            yield from self.compose_modal()
 
     def compose_modal(self) -> Iterable[Widget]:
-        with Vertical(id="search-box"):
-            yield Input(placeholder=self.placeholder)
-            yield ListView(id="results")
+        yield Input(placeholder=self.placeholder)
+        yield ListView(id="results")
 
     async def on_mount(self):
         """Build search index in a background thread to avoid blocking the UI."""

@@ -1,5 +1,182 @@
 /* Textual-specific theme styles */
 
+/* ===============================================
+   MODAL AND DIALOG COMMON STYLES
+   =============================================== */
+
+/* Base modal screen styling - apply to all modal screens */
+.modal-screen {
+    align: center middle;
+    border: none;
+    outline: none;
+}
+
+/* Standard dialog box container */
+.dialog-box {
+    width: auto;
+    max-width: 70;
+    height: auto;
+    background: $background;
+    color: $text;
+    border: tall $background;
+    padding: 1 2;
+}
+
+/* Smaller dialog box for simple confirmations */
+.dialog-box-small {
+    width: auto;
+    max-width: 60;
+    height: auto;
+    background: $background;
+    color: $text;
+    border: tall $background;
+    padding: 1 2;
+}
+
+/* Large dialog box for complex forms */
+.dialog-box-large {
+    width: 100;
+    height: auto;
+    max-height: 30;
+    background: $background;
+    color: $text;
+    border: tall $background;
+    padding: 2;
+}
+
+/* Search dialog specific sizing */
+.search-dialog {
+    width: 80;
+    max-height: 25;
+}
+
+/* Button row layout */
+.button-row {
+    width: auto;
+    height: auto;
+}
+
+.button-row Button {
+    width: auto;
+    margin-right: 1;
+}
+
+/* Full-width button row for forms */
+.button-row-full {
+    width: 100%;
+    height: auto;
+}
+
+.button-row-full Button {
+    width: 1fr;
+    margin-right: 1;
+}
+
+.button-row-full Button:last-of-type {
+    margin-right: 0;
+}
+
+/* Standard input field styling in modals */
+.modal-input {
+    width: 100%;
+    margin-bottom: 1;
+    text-align: left;
+}
+
+/* Question label in confirm dialogs */
+.modal-question {
+    margin-bottom: 1;
+}
+
+/* Browse dropdown toggle */
+.browse-btn {
+    width: 100%;
+    margin-top: 1;
+    text-align: left;
+}
+
+/* Directory tree in modal dialogs */
+#tree {
+    display: none;
+    height: 15;
+    width: 100%;
+    margin-top: 1;
+    overflow-y: auto;
+}
+
+/* Recent files list styling */
+#recent_list {
+    width: 100%;
+    height: auto;
+    max-height: 25;
+    padding: 2;
+}
+
+#recent_list ListItem {
+    margin-bottom: 1;
+    padding: 0 1;
+}
+
+/* Palette modal specific styling */
+.modal-title {
+    text-style: bold;
+    content-align: center middle;
+}
+
+.buttons {
+    width: 100%;
+    height: auto;
+    dock: bottom;
+}
+
+#dialog Button {
+    width: 1fr;
+}
+
+/* Dialog containing search elements */
+#dialog Input {
+    width: 100%;
+    margin-bottom: 1;
+}
+
+#dialog #results {
+    width: 100%;
+    height: auto;
+    max-height: 20;
+}
+
+#dialog #results ListItem {
+    margin-bottom: 1;
+    padding: 0 1;
+}
+
+/* Search box specific styling */
+.search-box {
+    width: 80;
+    height: auto;
+    max-height: 25;
+}
+
+.search-box Input {
+    width: 100%;
+    margin-bottom: 1;
+}
+
+.search-box #results {
+    width: 100%;
+    height: auto;
+    max-height: 20;
+}
+
+.search-box #results ListItem {
+    margin-bottom: 1;
+    padding: 0 1;
+}
+
+/* ===============================================
+   COMPONENT-SPECIFIC STYLES
+   =============================================== */
+
 #file-browser {
     border: tall $border-blurred;
     padding: 1 2;

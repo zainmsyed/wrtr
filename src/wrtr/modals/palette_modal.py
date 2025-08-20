@@ -13,44 +13,15 @@ class PaletteModal(Screen):
 
     BINDINGS = [Binding("escape", "esc", "Close")]
 
-    DEFAULT_CSS = """
-    /* top-level dialog wrapper */
-    #dialog {
-        width: auto;
-        height: auto;
-        margin: 4 8;
-        background: $panel;
-        color: $text;
-        border: tall $background;
-        padding: 1 2;
-    }
-
-    /* stretch all buttons the same */
-    #dialog Button {
-        width: 1fr;
-    }
-
-    /* title/question text */
-    .modal-title {
-        text-style: bold;
-        content-align: center middle;
-    }
-
-    /* bottom button-row */
-    .buttons {
-        width: 100%;
-        height: auto;
-        dock: bottom;
-    }
-    """
-
     def __init__(self, title: str | None = None) -> None:
         super().__init__()
         self.title = title
+        # Apply modal screen styling
+        self.add_class("modal-screen")
 
     def compose(self) -> Iterable[Widget]:
         # single wrapper with id="dialog" so our CSS applies
-        with Vertical(id="dialog"):
+        with Vertical(id="dialog", classes="dialog-box"):
             if self.title:
                 yield Static(self.title, classes="modal-title")
             # your subclass will yield its own body (inputs, buttons, etc.)
