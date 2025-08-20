@@ -172,6 +172,55 @@ class MarkdownEditor(MarkdownPreviewMixin, Vertical):
                 offset = self.buffer.rowcol_to_offset(row, col)
             except Exception:
                 return
+        # Open slash-command palette on Ctrl+Enter when current line starts with '/'
+        if event.key == "ctrl+enter":
+            # Determine current line text
+            row, col = self.text_area.cursor_location
+            try:
+                text = self.text_area.text
+            except Exception:
+                text = self.buffer.get_text()
+
+            lines = text.splitlines()
+            if row < len(lines) and lines[row].lstrip().startswith('/'):
+                # Show the slash command modal from a worker and apply the result there
+                from wrtr.modals.slash_command_modal import SlashCommandModal
+
+                # Compute leading whitespace start col now
+                leading = lines[row][: len(lines[row]) - len(lines[row].lstrip())]
+                start_col = len(leading)
+
+                async def _show_and_apply() -> None:
+                    try:
+                        result = await self.app.push_screen_wait(SlashCommandModal())
+                        if not result:
+                            return
+                        # Replace from start_col up to the cursor column with the chosen command
+                        start_pos = (row, start_col)
+                        end_pos = (row, col)
+                        try:
+                            # Insert exactly the selected command (no extra trailing space)
+                            self.view.replace_range(start_pos, end_pos, result)
+                            # Sync buffer if TextArea reflects text
+                            if hasattr(self, 'text_area') and getattr(self.text_area, 'text', None) is not None:
+                                try:
+                                    self.buffer.set_text(self.text_area.text)
+                                except Exception:
+                                    pass
+                            # Move cursor after inserted text
+                            new_col = start_col + len(result) + 1
+                            self.view.move_cursor(row, new_col)
+                        except Exception:
+                            # ignore failures applying
+                            pass
+                    except Exception:
+                        # ensure worker errors don't bubble here
+                        pass
+
+                # Schedule the worker to show the modal and apply result asynchronously
+                self.app.run_worker(_show_and_apply(), exclusive=True)
+                event.stop()
+                return
             for start, end, target in self.view.backlink_regions:
                 if start <= offset < end:
                     self.post_message(BacklinkClicked(self, target))
