@@ -125,6 +125,15 @@ class wrtr(GlobalKeyHandler, App):
             # Non-fatal: app can still run without seeded dictionaries
             pass
 
+        # Ensure templates directory exists and initialize defaults
+        try:
+            from wrtr.services.template_service import TemplateService
+            ts = TemplateService(self.DEFAULT_DIR)
+            ts.initialize_default_templates()
+        except Exception:
+            # Non-fatal: continue even if template initialization fails
+            pass
+
         # Copy seed documents if they exist
         if self.SEED_DIR.exists():
             for md_file in self.SEED_DIR.glob("*.md"):
@@ -172,6 +181,8 @@ class wrtr(GlobalKeyHandler, App):
     async def action_switch_workspace(self, number: str) -> None:
         # TODO: switch to workspace number
         pass
+
+    # Template creation action removed in favor of slash-command-driven flow
 
     def action_new_file(self) -> None:
         """Handle creation of a new file: collapse browser and show a full-width editor."""
