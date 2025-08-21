@@ -47,7 +47,8 @@ def default_commands():
         return "---\n"
 
     def snippet():
-        return "<!-- snippet: [name] -->"
+        # Return a sentinel recognized by the editor to open the snippet UI flow
+        return "__SHOW_SNIPPET_MODAL__"
 
     def table():
         # Default 2 columns, 3 rows

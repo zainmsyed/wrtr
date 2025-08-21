@@ -110,6 +110,53 @@ async def process_slash_command(editor, event: Key) -> bool:
             # Fallback: do nothing and let normal handler proceed
             return False
 
+    # Special sentinel triggers the UI snippet workflow
+    if replacement == "__SHOW_SNIPPET_MODAL__":
+        try:
+            from wrtr.modals.snippet_modal import SnippetModal
+            from wrtr.modals.snippet_variables_modal import SnippetVariablesModal
+            from wrtr.services.snippet_service import SnippetService
+
+            async def _show_and_apply_snippet():
+                chosen = await editor.app.push_screen_wait(SnippetModal())
+                if not chosen:
+                    return
+                ss = SnippetService()
+                sn = ss.get_snippet(chosen)
+                if not sn:
+                    return
+                values = {}
+                if sn.variables:
+                    vals = await editor.app.push_screen_wait(SnippetVariablesModal(sn.variables))
+                    if not vals:
+                        return
+                    values = vals
+                rendered = ss.render(chosen, values)
+                # Replace the original slash-command span (start_col..end_col)
+                start_pos = (row, start_col)
+                end_pos = (row, end_col)
+                editor.view.replace_range(start_pos, end_pos, rendered)
+                # Sync buffer
+                if hasattr(editor.text_area, 'text') and getattr(editor.text_area, 'text') is not None:
+                    try:
+                        editor.buffer.set_text(editor.text_area.text)
+                    except Exception:
+                        pass
+                # Move cursor after the replacement
+                rep_lines = rendered.splitlines()
+                if len(rep_lines) == 1:
+                    new_col = start_col + len(rep_lines[0])
+                    editor.view.move_cursor(row, new_col)
+                else:
+                    new_row = row + len(rep_lines) - 1
+                    new_col = len(rep_lines[-1])
+                    editor.view.move_cursor(new_row, new_col)
+
+            editor.app.run_worker(_show_and_apply_snippet(), exclusive=True)
+            return True
+        except Exception:
+            return False
+
     # Replace only the command span; preserve the rest of the line
     start_pos = (row, start_col)
     end_pos = (row, end_col)
