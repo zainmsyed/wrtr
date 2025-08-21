@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 from .spellcheck import start_spellcheck, exit_spellcheck, update_spellcheck_display
 from wrtr.services.slash_command_service import SlashCommandService
+from wrtr.services.template_service import TemplateService
 
 async def process_slash_command(editor, event: Key) -> bool:
     """Process slash commands on Enter key"""
@@ -59,6 +60,55 @@ async def process_slash_command(editor, event: Key) -> bool:
     replacement = await SlashCommandService.execute(line)
     if not replacement or replacement == line or replacement.startswith("Unknown command"):
         return False
+
+    # Special sentinel triggers the UI template workflow
+    if replacement == "__SHOW_TEMPLATE_MODAL__":
+        # Show template selection modal, then variables modal, then insert
+        try:
+            from wrtr.modals.template_modal import TemplateModal
+            from wrtr.modals.template_variables_modal import TemplateVariablesModal
+
+            async def _show_and_apply():
+                chosen = await editor.app.push_screen_wait(TemplateModal())
+                if not chosen:
+                    return
+                ts = TemplateService()
+                tpl = ts.get_template(chosen)
+                if not tpl:
+                    return
+                # If template has variables, ask the user
+                values = {}
+                if tpl.variables:
+                    vals = await editor.app.push_screen_wait(TemplateVariablesModal(tpl.variables))
+                    if not vals:
+                        return
+                    values = vals
+                rendered = ts.render(chosen, values)
+                # Replace the original slash-command span (start_col..end_col)
+                start_pos = (row, start_col)
+                end_pos = (row, end_col)
+                editor.view.replace_range(start_pos, end_pos, rendered)
+                # Sync buffer
+                if hasattr(editor.text_area, 'text') and getattr(editor.text_area, 'text') is not None:
+                    try:
+                        editor.buffer.set_text(editor.text_area.text)
+                    except Exception:
+                        pass
+                # Move cursor after the replacement (keep same logic as below)
+                rep_lines = rendered.splitlines()
+                if len(rep_lines) == 1:
+                    new_col = start_col + len(rep_lines[0])
+                    editor.view.move_cursor(row, new_col)
+                else:
+                    new_row = row + len(rep_lines) - 1
+                    new_col = len(rep_lines[-1])
+                    editor.view.move_cursor(new_row, new_col)
+
+            editor.app.run_worker(_show_and_apply(), exclusive=True)
+            return True
+        except Exception:
+            # Fallback: do nothing and let normal handler proceed
+            return False
 
     # Replace only the command span; preserve the rest of the line
     start_pos = (row, start_col)
