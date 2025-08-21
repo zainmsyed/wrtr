@@ -44,9 +44,41 @@ class SnippetService:
             logger.error(f"Failed to create snippet directory: {e}")
 
     def initialize_default_snippets(self) -> None:
-        if not self.default_snippets.exists():
-            logger.info("Creating default snippets file")
-            default_content = """
+        # Seed the single canonical user_snippets.md if missing. If an old
+        # default_snippets.md exists (from previous versions), migrate it into
+        # user_snippets.md so installs have one file to edit.
+        if not self.user_snippets.exists():
+            logger.info("Creating user snippets file (seeding defaults)")
+            # Prefer existing packaged/default file if present for migration
+            if self.default_snippets.exists():
+                try:
+                    default_content = self.default_snippets.read_text(encoding='utf8')
+                except Exception:
+                    default_content = None
+            else:
+                default_content = None
+
+            if default_content is None:
+                default_content = """
+<!-- QUICK START: Snippets -->
+<!--
+Quick Start - adding & using snippets
+
+1. Snippets live in `wrtr/data/snippets/user_snippets.md` and are plain Markdown.
+2. Each snippet is wrapped between comment markers:
+    `<!-- SNIPPET: name -->` and `<!-- END SNIPPET -->`.
+3. To insert a snippet from the editor use the `/snippet <name>` command
+    or pick it from the snippet modal. For snippets with variables, the
+    app will prompt you to fill values before insertion.
+
+Example snippet:
+
+<!-- SNIPPET: greeting -->
+Hello, **{{name}}**! Welcome to Wrtr.
+
+<!-- END SNIPPET -->
+-->
+
 <!-- SNIPPET: lorem -->
 Lorem ipsum dolor sit amet, consectetur adipiscing elit.
 
@@ -60,9 +92,11 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit.
 <!-- END SNIPPET -->
 """
             try:
-                self.default_snippets.write_text(default_content.strip() + "\n")
+                # recreate the snippets directory in case it was deleted
+                self.snippet_dir.mkdir(parents=True, exist_ok=True)
+                self.user_snippets.write_text(default_content.strip() + "\n", encoding='utf8')
             except Exception as e:
-                logger.error(f"Failed to write default snippets: {e}")
+                logger.error(f"Failed to write user snippets: {e}")
 
     def _parse_snippets_from_text(self, text: str) -> Dict[str, Snippet]:
         snippets: Dict[str, Snippet] = {}
@@ -85,21 +119,23 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit.
 
     def load_snippets(self) -> Dict[str, Snippet]:
         snippets: Dict[str, Snippet] = {}
+        # Load snippets only from the canonical user file. If it's missing but
+        # an old default file exists, migrate it into user_snippets.md and load
+        # from there.
+        if not self.user_snippets.exists() and self.default_snippets.exists():
+            try:
+                content = self.default_snippets.read_text(encoding='utf8')
+                # write to user_snippets for future runs
+                self.user_snippets.write_text(content, encoding='utf8')
+            except Exception as e:
+                logger.error(f"Failed to migrate default snippets to user snippets: {e}")
+
         if self.user_snippets.exists():
             try:
                 text = self.user_snippets.read_text(encoding='utf8')
                 snippets.update(self._parse_snippets_from_text(text))
             except Exception as e:
                 logger.error(f"Failed to load user snippets: {e}")
-        if self.default_snippets.exists():
-            try:
-                text = self.default_snippets.read_text(encoding='utf8')
-                defaults = self._parse_snippets_from_text(text)
-                for k, v in defaults.items():
-                    if k not in snippets:
-                        snippets[k] = v
-            except Exception as e:
-                logger.error(f"Failed to load default snippets: {e}")
         return snippets
 
     def get_snippet_names(self) -> List[str]:

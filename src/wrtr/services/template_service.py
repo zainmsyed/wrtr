@@ -47,11 +47,45 @@ class TemplateService:
             logger.error(f"Failed to create template directory: {e}")
 
     def initialize_default_templates(self) -> None:
-        """Create default templates file if missing."""
-        if not self.default_templates.exists():
-            logger.info("Creating default templates file")
-            # Basic default templates (kept minimal here)
-            default_content = """
+        """Seed the canonical `user_templates.md` with defaults if missing.
+
+        If an old `default_templates.md` exists, migrate it into
+        `user_templates.md` so users have a single file to edit.
+        """
+        if not self.user_templates.exists():
+            logger.info("Creating user templates file (seeding defaults)")
+            # Prefer existing default file for migration
+            if self.default_templates.exists():
+                try:
+                    default_content = self.default_templates.read_text(encoding='utf8')
+                except Exception:
+                    default_content = None
+            else:
+                default_content = None
+
+                if default_content is None:
+                     # Basic default templates with Quick Start (kept minimal here)
+                     default_content = """
+<!-- QUICK START: Templates -->
+<!--
+Quick Start - adding & using templates
+
+1. Templates live in `wrtr/data/templates/user_templates.md` and are plain Markdown.
+2. Each template is wrapped between comment markers:
+    `<!-- TEMPLATE: name -->` and `<!-- END TEMPLATE -->`.
+3. To insert a template from the editor use the template modal or
+    the `/template <name>` slash command (if available).
+
+Example template:
+
+<!-- TEMPLATE: Simple Greeting -->
+# Hello {{name}}
+
+Welcome to your document, **{{name}}**!
+
+<!-- END TEMPLATE -->
+-->
+
 <!-- TEMPLATE: Daily Journal -->
 # Daily Journal - {{date}}
 
@@ -92,9 +126,11 @@ class TemplateService:
 <!-- END TEMPLATE -->
 """
             try:
-                self.default_templates.write_text(default_content.strip() + "\n")
+                # ensure directory exists and write the canonical user file
+                self.template_dir.mkdir(parents=True, exist_ok=True)
+                self.user_templates.write_text(default_content.strip() + "\n", encoding='utf8')
             except Exception as e:
-                logger.error(f"Failed to write default templates: {e}")
+                logger.error(f"Failed to write user templates: {e}")
 
     def _parse_templates_from_text(self, text: str) -> Dict[str, Template]:
         """Parse multiple templates from a markdown string."""
@@ -124,24 +160,21 @@ class TemplateService:
         Returns a dict mapping template name -> Template
         """
         templates: Dict[str, Template] = {}
-        # Prefer user_templates (allow user to override)
+        # Load only from the canonical user file. If missing but an old
+        # default file exists, migrate it into user_templates.md first.
+        if not self.user_templates.exists() and self.default_templates.exists():
+            try:
+                content = self.default_templates.read_text(encoding='utf8')
+                self.user_templates.write_text(content, encoding='utf8')
+            except Exception as e:
+                logger.error(f"Failed to migrate default templates to user templates: {e}")
+
         if self.user_templates.exists():
             try:
                 text = self.user_templates.read_text(encoding='utf8')
                 templates.update(self._parse_templates_from_text(text))
             except Exception as e:
                 logger.error(f"Failed to load user templates: {e}")
-
-        # Load defaults and fill in only missing templates
-        if self.default_templates.exists():
-            try:
-                text = self.default_templates.read_text(encoding='utf8')
-                defaults = self._parse_templates_from_text(text)
-                for k, v in defaults.items():
-                    if k not in templates:
-                        templates[k] = v
-            except Exception as e:
-                logger.error(f"Failed to load default templates: {e}")
 
         return templates
 

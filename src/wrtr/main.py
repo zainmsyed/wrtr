@@ -134,6 +134,15 @@ class wrtr(GlobalKeyHandler, App):
             # Non-fatal: continue even if template initialization fails
             pass
 
+        # Ensure snippets directory exists and initialize defaults
+        try:
+            from wrtr.services.snippet_service import SnippetService
+            ss = SnippetService(self.DEFAULT_DIR)
+            ss.initialize_default_snippets()
+        except Exception:
+            # Non-fatal: continue even if snippet initialization fails
+            pass
+
         # Copy seed documents if they exist
         if self.SEED_DIR.exists():
             for md_file in self.SEED_DIR.glob("*.md"):
