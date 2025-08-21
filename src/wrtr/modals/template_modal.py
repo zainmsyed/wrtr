@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Iterable
 from textual.widgets import Input, ListView, ListItem, Static
 from textual.widget import Widget
+from textual.events import Key
 from rapidfuzz import process, fuzz
 from wrtr.modals.palette_dismiss_modal import PaletteDismissModal
 from wrtr.services.template_service import TemplateService
@@ -77,11 +78,42 @@ class TemplateModal(PaletteDismissModal[str | None]):
             if name:
                 self.dismiss(name)
                 return
+        # Fallback: if typed an exact template name, accept it
+        v = message.value.strip()
+        if v and v in self.templates:
+            self.dismiss(v)
+            return
 
     def on_key(self, event) -> None:
         # Dismiss on escape
-        if getattr(event, 'key', None) == 'escape':
+        key = getattr(event, 'key', None) or getattr(event, 'name', None)
+        if key == "escape":
             self.dismiss(None)
             event.stop()
             return
+
+        # Arrow navigation: move focus to list when down pressed in input
+        if key in ("down", "up") and isinstance(self.focused, Input):
+            results = self.query_one(ListView)
+            self.set_focus(results)
+            if results.children:
+                if key == "down":
+                    results.index = 0
+                else:
+                    results.index = len(results.children) - 1
+            event.stop()
+            return
+
+        # Let ListView handle navigation when focused
+        if key in ("down", "up") and isinstance(self.focused, ListView):
+            super().on_key(event)
+            return
+
+        # Tab returns focus to input
+        if key == "tab":
+            inp = self.query_one(Input)
+            self.set_focus(inp)
+            event.stop()
+            return
+
         super().on_key(event)

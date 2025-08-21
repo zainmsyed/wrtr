@@ -25,7 +25,8 @@ def default_commands():
         return "- [ ] "
 
     def template():
-        return "<!-- template: [type] -->"
+        # Return a sentinel recognized by the editor to open the template UI flow
+        return "__SHOW_TEMPLATE_MODAL__"
 
     def toc():
         return "## Table of Contents\n\n"

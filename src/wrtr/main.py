@@ -182,6 +182,8 @@ class wrtr(GlobalKeyHandler, App):
         # TODO: switch to workspace number
         pass
 
+    # Template creation action removed in favor of slash-command-driven flow
+
     def action_new_file(self) -> None:
         """Handle creation of a new file: collapse browser and show a full-width editor."""
         # Pop HomeScreen then delegate new-file layout
